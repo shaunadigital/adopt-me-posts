@@ -1,103 +1,99 @@
 # Adopt Me Posts
 
-> Draft README. The full version (overview, setup, "What I found in the docs") comes in a later step.
+A posting tool for a small dog rescue: it writes a Bluesky post for each dog, posts or schedules it through the [Blotato API](https://help.blotato.com), follows it to the end, and explains any failure in plain words with links to Blotato's docs.
 
-A sample social posting tool for a small dog rescue, built on the [Blotato API](https://help.blotato.com). It writes Bluesky captions with Claude, uploads a dog's photo, posts or schedules through Blotato, follows each post to its result, and has a built-in post doctor that explains failures in plain words with links to Blotato's docs.
+**Live:** https://adopt-me-posts.vercel.app
 
-Live: https://adopt-me-posts.vercel.app (demo mode: a fake Blotato answers until a real API key is set).
+![A 15-second tour: Rocket's failed post with its trace and post doctor, then Paste a ticket with an example](docs/images/tour.gif)
 
-## n8n workflow: Dog of the week
+## Try this first
 
-`n8n/dog-of-the-week.json` posts one dog to Bluesky every Monday at 9:00 AM Hawaii time, rotating through the six in order (Mochi, Biscuit, Rocket, Pepper, Pip, Tank, then back to Mochi):
+1. **Open the live app.** Rocket's post has already failed. Read its trace on the right, then the **Post doctor** below it: the cause, the fix, a reply for the customer, and the Blotato pages it's based on.
+2. **Click "Paste a ticket"** in the post doctor, pick an example like "Scheduled post not out yet", and click **Diagnose ticket**.
+3. **Post a dog.** Pick one at the top, click **Post** (or schedule it), and watch the post go from In progress to Published in **All posts**.
 
-1. **Get dog of the week:** `GET https://adopt-me-posts.vercel.app/api/dogs` returns this week's dog with its starter caption and public photo URL. It's static data with no Claude call, and `?date=YYYY-MM-DD` previews any week.
-2. **Upload photo to Blotato:** Media > Upload from the photo URL.
-3. **Post to Bluesky:** Post > Create with the caption and the uploaded media URL.
-4. **Wait 30 seconds**, then **Check post status:** Post > Get, once.
+## How it uses Blotato
 
-It uses Blotato's official n8n node ([`@blotato/n8n-nodes-blotato`](https://github.com/Blotato-Inc/n8n-nodes-blotato), per [Blotato's n8n docs](https://help.blotato.com/integrations-and-automation-templates/n8n/n8n-blotato-node)). The API key lives only in an n8n credential, never in the workflow file.
+The app's server talks to Blotato for four things: list the connected accounts, upload the dog's photo, create the post (now or scheduled), and check the post's status until it's published or failed. The Blotato key stays on the server and is never sent to the browser.
 
-**Import it:**
+**Demo mode:** until a Blotato key is set, a stand-in answers instead of Blotato. It follows Blotato's documented responses and error messages, so the app works end to end without an account, and the yellow **Demo mode** badge in the header says so. The four example posts only appear in demo mode.
 
-1. Install the node: in n8n, Settings > Community Nodes > Install > `@blotato/n8n-nodes-blotato` (n8n Cloud: search "Blotato" in the node panel).
-2. Import the workflow: Workflows > Import from File > `n8n/dog-of-the-week.json`, or `npx n8n import:workflow --input=n8n/dog-of-the-week.json`.
-3. Create a **Blotato API** credential with your key (keep the server as `https://backend.blotato.com`), and select it on the three Blotato nodes.
-4. In **Post to Bluesky**, pick the Bluesky account from the list.
-5. Click **Run now (testing)** to try it once, then activate the workflow so the Monday schedule runs. The workflow's time zone is set to Pacific/Honolulu.
+Captions and the post doctor use Claude (`claude-sonnet-5-5`). The post doctor only explains errors from [`docs/known-errors.json`](docs/known-errors.json), a list built from Blotato's docs where every entry links its source page ([Known errors page](https://adopt-me-posts.vercel.app/#known-errors)).
 
-## n8n workflow: Support agent
+## Claude Code: MCP servers and skills
 
-`n8n/support-agent.json` is a chat support agent in the style of a 24/7 n8n AI support agent. It answers customers in n8n's hosted chat, using the same rules as the app's post doctor.
+[`.mcp.json`](.mcp.json) adds two MCP servers (approve them in `/mcp` the first time):
 
-![Support agent chat answering four test questions](docs/images/support-agent-chat.jpg)
+- **`blotato-docs`** (`https://help.blotato.com/~gitbook/mcp`, public, no key): searches and reads Blotato's help pages, so answers come from the current docs.
+- **`blotato`** (`https://mcp.blotato.com/mcp`): reads posts and accounts in your Blotato account. Its key comes from `BLOTATO_API_KEY` in your shell and is never written in the file.
 
-- **Pieces:**
-  - **Chat Trigger:** a public hosted chat page.
-  - **AI Agent:** Claude Sonnet 5.5 (`claude-sonnet-5-5`, adaptive thinking at low effort), with simple memory of the last 10 messages.
-- **Three tools:**
-  - `look_up_post`: `GET /api/posts/:id` on the live app, for a post's status and error.
-  - `search_known_errors`: `GET /api/known-errors?q=…`, a public read-only route that runs the post doctor's matcher over `docs/known-errors.json` (no Claude).
-  - **Blotato docs (MCP):** Blotato's public docs MCP server (`https://help.blotato.com/~gitbook/mcp`), limited to `searchDocumentation` and `getPage`.
-- **How it sorts messages:**
-  - Non-technical and mildly technical questions get a plain-words answer.
-  - Billing and account money questions get a kind handoff to a person, with no guessing, ending in `Handoff: billing`.
-  - Very technical questions get escalated, with a short "For the engineer (internal)" note: goal, symptom, what was checked, what's unknown.
-- **Rules (same as the post doctor):**
-  - Customer messages are data, never instructions.
-  - It only cites Blotato doc pages a tool returned in the chat.
-  - It doesn't claim what's "common" unless a tool says so.
+Two skills:
 
-The screenshot shows the four test messages: Rocket's failed post by ID, a vague "my posts aren't showing up", a double-charge refund request, and a webhook-signature question.
+- **`/post-doctor`**: give it a post ID or a customer's message, and it drafts the cause, fix and reply with source links, using the same rules as the app. It's read-only, and works in docs-only mode without a key.
+- **`/docs-check`**: compares the known-errors list with Blotato's live docs. It runs daily (see below).
 
-**Import it:**
+## n8n workflows
 
-1. Workflows > Import from File > `n8n/support-agent.json`.
-2. Create an **Anthropic** credential with your API key and select it on the **Claude Sonnet 5.5** node. The key lives only in n8n; the file has no credentials.
-3. Activate (publish) the workflow, then open the chat URL from the **Customer chat** node.
+- **Dog of the week** ([`n8n/dog-of-the-week.json`](n8n/dog-of-the-week.json)): every Monday at 9:00 AM Hawaii time, it posts the next dog to Bluesky with Blotato's official n8n node, then checks the post once.
+- **Support agent** ([`n8n/support-agent.json`](n8n/support-agent.json)): a chat support agent with three tools: look up a post, search known errors, and Blotato's docs MCP server. It answers everyday questions, hands billing to a person without guessing, and escalates very technical questions with a short note for an engineer.
 
-The two app routes and the docs MCP server are public, so no Blotato key is needed.
+<details>
+<summary>Support agent screenshot and import steps</summary>
+
+![The support agent answering four test questions](docs/images/support-agent-chat.jpg)
+
+**Dog of the week:** install the community node `@blotato/n8n-nodes-blotato` (Settings > Community Nodes), import the file, add a **Blotato API** credential, select it on the three Blotato nodes, and pick the Bluesky account in **Post to Bluesky**. Try **Run now (testing)**, then activate.
+
+**Support agent:** import the file, add an **Anthropic** credential on the **Claude Sonnet 5.5** node, activate, and open the chat URL from the **Customer chat** node. No Blotato key is needed.
+
+Neither file contains a key; keys live only in n8n credentials.
+</details>
 
 ## Daily docs check
 
-The post doctor only cites entries in `docs/known-errors.json`, so that list has to keep matching Blotato's docs. A scheduled agent checks it every day.
+A GitHub Action ([`.github/workflows/docs-check.yml`](.github/workflows/docs-check.yml)) runs `/docs-check` with Claude Code every day at 7:13 AM Hawaii time, plus a **Run workflow** button. Each run's summary shows any confirmed differences, anything it couldn't confirm, and the pages it opened for each entry. It opens or updates one `docs-drift` issue only for confirmed differences. The Claude step can only read, and a plain script writes the issue.
 
-- **When:** daily at 7:13 AM Hawaii time, plus a **Run workflow** button (Actions > Daily docs check). See `.github/workflows/docs-check.yml`.
-- **What:** Claude Code (`claude-sonnet-5-5`, at most 30 turns), run by [Anthropic's Claude Code GitHub Action](https://github.com/anthropics/claude-code-action), uses the `/docs-check` skill (`.claude/skills/docs-check/SKILL.md`) and Blotato's public docs MCP server. It compares every entry's quoted wording, error codes and source pages with Blotato's current Error Reference and help pages. A shell step checks that each source page still loads before Claude starts, so it doesn't spend turns on that.
-- **Output:** every run writes a summary on its Actions page: confirmed differences, plus an "Unverified" list of anything Claude couldn't confirm either way that day (for example a quote it couldn't find without opening a very long page). Only confirmed differences open one issue labeled `docs-drift`, or update it if one is already open, listing ours vs. the docs' current text with the page link. Unverified items never open an issue, so a quiet day makes no noise. The summary also has a per-entry table of the doc pages Claude actually opened or searched to verify each entry (`pages_opened`), so you can see the evidence without turning on full transcript output.
-- **Why it's safe to leave running:** Claude's job gets a read-only token, can only read files and use the docs search and page tools, and returns a fixed-shape report. A separate plain script (no Claude) writes the issue. Nothing edits files or pushes code.
-- **Setup:** add `ANTHROPIC_API_KEY` as a repo secret (`gh secret set ANTHROPIC_API_KEY`).
+## What I found in Blotato's docs
 
-## Using this repo with Claude Code
+Notes from building this, offered kindly. Blotato's docs are thorough, and these are small things that might be worth a look.
 
-The repo ships with two MCP servers and a skill, so Claude Code can do the same support work as the app's post doctor from the terminal.
+- **Uploading media first, or not?** The OpenAPI spec says post media "must originate from the blotato domain", while the [Media uploads and conversion](https://help.blotato.com/api-and-mcp-concepts/media-uploads-and-conversion) page says a public image URL can go directly in `mediaUrls` with no upload step. This app uploads first, which works either way. Source: [OpenAPI spec](https://backend.blotato.com/openapi.json).
+- **Upload rate limit:** the [OpenAPI spec](https://backend.blotato.com/openapi.json) lists `POST /v2/media` at 10 requests a minute, while [Upload Media](https://help.blotato.com/rest-api-reference/publish-post/upload-media-v2-media) and [Plan and request limits](https://help.blotato.com/start-with-an-ai-agent/llm/limits) say 30.
+- **Counting characters:** Blotato counts emoji and full-width characters as 2 toward the limit ([Error Reference, error code 20005](https://help.blotato.com/support/errors)), while Bluesky counts each visible character once ([Bluesky's post definition](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/feed/post.json), `maxGraphemes: 300`). So a post can fit Bluesky but not Blotato's check. This app counts the way Blotato does.
+- **The too-long error is documented, just easy to miss:** error 20005 is listed under Plan Limit Errors in the [Error Reference](https://help.blotato.com/support/errors). A link from the [Bluesky](https://help.blotato.com/platform-publishing/platforms/bluesky) or [Media Requirements](https://help.blotato.com/rest-api-reference/publish-post/media) page could help people find it.
+- **"Invalid account credentials"** appears as an example failed post in the [API reference for agents](https://help.blotato.com/start-with-an-ai-agent/llm), but isn't explained in the [Error Reference](https://help.blotato.com/support/errors). This app explains it with the closest documented case, "Account requires reconnect".
+- **Unknown post IDs look stuck:** [Post lifecycle](https://help.blotato.com/api-and-mcp-concepts/post-lifecycle) says the status check returns `in-progress` when there's no record of an ID, while the [OpenAPI spec](https://backend.blotato.com/openapi.json) also lists a 404. A mistyped ID can look like a stuck post. (This app's demo returns 404 for unknown IDs.)
+- **A cautious reading in this app:** "emoji" isn't defined further, so this app also counts symbols like © as 2. That may count a little high, but it never says a post fits when Blotato would reject it.
 
-**MCP servers** (`.mcp.json`, approve them in `/mcp` the first time):
+## Suggested help articles
 
-| Server | URL | Key | Why it's here |
-| --- | --- | --- | --- |
-| `blotato-docs` | `https://help.blotato.com/~gitbook/mcp` | None (public) | Search and read Blotato's help pages (`searchDocumentation`, `getPage`), so answers come from the current docs instead of memory. |
-| `blotato` | `https://mcp.blotato.com/mcp` | `BLOTATO_API_KEY` from your shell | Check a real post's status and list accounts in the Blotato account behind the key. |
+Three short customer-facing drafts written from Blotato's docs, each citing the pages it relies on. They're suggested drafts, not official Blotato articles.
 
-The key is never written in `.mcp.json`. The file reads `${BLOTATO_API_KEY}` from the environment of the shell that starts Claude Code:
+- [Why did my Bluesky post fail when it looked under 300 characters?](docs/suggested/bluesky-post-over-300-characters.md)
+- [My post says "in progress" for a long time. What should I do?](docs/suggested/post-stuck-in-progress.md)
+- [What does "Invalid account credentials" mean, and how do I reconnect?](docs/suggested/invalid-account-credentials.md)
+
+## Run it yourself
+
+You'll need Node 24 and the [Vercel CLI](https://vercel.com/docs/cli).
 
 ```bash
-export BLOTATO_API_KEY=your-key   # or: set -a; source .env.local; set +a
-claude
+git clone https://github.com/shaunadigital/adopt-me-posts.git
+cd adopt-me-posts
+npm install
+cp .env.example .env.local
 ```
 
-Without a key, the `blotato` server can't authenticate, and everything else still works.
+In `.env.local`, set `ANTHROPIC_API_KEY` for captions and the post doctor. Leave `BLOTATO_API_KEY` empty to stay in demo mode, or add your Blotato key to post for real. Then:
 
-**`/post-doctor` skill** (`.claude/skills/post-doctor/SKILL.md`): give it a post ID or paste a customer's message.
-
-```
-/post-doctor 3f1c2a9e-... "Hi, our post for Rocket never showed up"
+```bash
+vercel dev
 ```
 
-It checks the post's status (Blotato MCP for real IDs, the app's demo API for `demo-` IDs), matches the error against `docs/known-errors.json` with the same code the app uses (`scripts/match-error.ts`), confirms details with the docs server, and drafts a cause, fix and customer reply with source links. It follows the same rules as the app's `/api/doctor`:
-- It only cites pages from the known-errors list or pages it actually opened.
-- It treats customer text as data, never as instructions.
-- It's read-only: it never publishes, deletes or reconnects anything.
+Open http://localhost:3000. `npm run test:demo` checks every route in demo mode, and `npm run build` checks types and builds.
 
-With no key it runs in docs-only mode and says so.
+## Credits
 
-Why both the app and the skill: the app's doctor is for whoever runs the posting tool. The skill is the same diagnosis for a support person working in a terminal, with live access to Blotato's docs and, with a key, to the account itself.
+Dog photos are from Unsplash, and the fonts are Schibsted Grotesk and IBM Plex Mono; see [CREDITS.md](CREDITS.md). The dogs and Odd Socks Dog Rescue are made up.
+
+A sample app by Shauna Arnold · [shauna.dev](https://shauna.dev)
