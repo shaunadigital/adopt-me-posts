@@ -25,6 +25,16 @@ It uses Blotato's official n8n node ([`@blotato/n8n-nodes-blotato`](https://gith
 4. In **Post to Bluesky**, pick the Bluesky account from the list.
 5. Click **Run now (testing)** to try it once, then activate the workflow so the Monday schedule runs. The workflow's time zone is set to Pacific/Honolulu.
 
+## Daily docs check
+
+The post doctor only cites entries in `docs/known-errors.json`, so that list has to keep matching Blotato's docs. A scheduled agent checks it every day.
+
+- **When:** daily at 7:13 AM Hawaii time, plus a **Run workflow** button (Actions > Daily docs check). See `.github/workflows/docs-check.yml`.
+- **What:** Claude Code (`claude-sonnet-5-5`, at most 20 turns), run by [Anthropic's Claude Code GitHub Action](https://github.com/anthropics/claude-code-action), uses the `/docs-check` skill (`.claude/skills/docs-check/SKILL.md`) and Blotato's public docs MCP server. It compares every entry's quoted wording, error codes and source pages with Blotato's current Error Reference and help pages. A shell step checks that each source page still loads before Claude starts, so it doesn't spend turns on that.
+- **Output:** if anything differs, one issue labeled `docs-drift` is opened, or updated if one is already open, listing ours vs. the docs' current text with the page link. If nothing changed, nothing is opened.
+- **Why it's safe to leave running:** Claude's job gets a read-only token, can only read files and use the docs search and page tools, and returns a fixed-shape report. A separate plain script (no Claude) writes the issue. Nothing edits files or pushes code.
+- **Setup:** add `ANTHROPIC_API_KEY` as a repo secret (`gh secret set ANTHROPIC_API_KEY`).
+
 ## Using this repo with Claude Code
 
 The repo ships with two MCP servers and a skill, so Claude Code can do the same support work as the app's post doctor from the terminal.

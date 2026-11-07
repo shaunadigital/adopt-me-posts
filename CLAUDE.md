@@ -71,6 +71,11 @@ Routes pass Blotato's status and body straight through, so the frontend sees rea
 - `api/dogs.ts`: public, static (no Claude). Rotation anchored to Monday 2026-11-09 (Mochi), weeks counted in Hawaii time; `?date=YYYY-MM-DD` previews a week.
 - Tested 2026-11-07 with n8n 2.46.6 via npx (user folder kept outside the repo): the workflow imports. A copy with Blotato nodes swapped for Set nodes ran end to end (live `/api/dogs`, all expressions resolve). The real Upload node with a fake-key credential reached Blotato and got 401 "Authorization failed - please check your credentials". The real workflow won't run until a Bluesky account is picked in Post to Bluesky, which needs a real key.
 
+## Daily docs check
+- `.github/workflows/docs-check.yml`: daily at 17:13 UTC (7:13 AM Hawaii) plus workflow_dispatch. Job `check` (contents: read) curls every source URL, then runs `anthropics/claude-code-action@v1` with `/docs-check`, `claude-sonnet-5-5`, `--max-turns 20`, only Read and the blotato-docs search/getPage tools (Edit, Write, Bash and web tools disallowed), and a `--json-schema` report. Job `report` (issues: write, no Claude) opens or updates one open `docs-drift` issue only when `differences` is non-empty.
+- Needs the `ANTHROPIC_API_KEY` repo secret (set 2026-11-07).
+- Skill: `.claude/skills/docs-check/SKILL.md` (also runs locally in Claude Code with the blotato-docs MCP).
+
 ## Go-live checklist (PLAN step 10, after the Blotato key exists)
 - [ ] Blotato MCP: export `BLOTATO_API_KEY`, approve `blotato` in `/mcp`, run `blotato_list_accounts`, then `/post-doctor` with a real postSubmissionId.
 - [ ] n8n full run: install `@blotato/n8n-nodes-blotato`, import `n8n/dog-of-the-week.json`, create the Blotato API credential, select it on the three Blotato nodes, pick the Bluesky account in Post to Bluesky, click Run now (testing), and confirm Check post status ends `published` (or `in-progress`; Blotato's docs say wait at least 10 s between checks). Screenshot the run for the README, then decide whether to activate the Monday schedule.

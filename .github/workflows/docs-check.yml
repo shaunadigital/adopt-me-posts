@@ -1,0 +1,103 @@
+# Daily docs check: does docs/known-errors.json still match Blotato's live docs?
+#
+# Job 1 (check): Claude Code runs the /docs-check skill with the public blotato-docs MCP server.
+#   Read-only: the token can only read the repo, editing tools and Bash are disallowed, and Claude
+#   returns a structured report instead of acting on anything.
+# Job 2 (report): a plain script (no Claude) opens or updates one issue labeled docs-drift, and
+#   only when the report has differences. Nothing else is written; no code is ever pushed.
+name: Daily docs check
+
+on:
+  schedule:
+    - cron: "13 17 * * *" # 7:13 AM Hawaii time (UTC-10, no daylight saving)
+  workflow_dispatch: {}
+
+concurrency:
+  group: docs-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      report: ${{ steps.claude.outputs.structured_output }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Cheap, deterministic existence check for every source page, so Claude doesn't spend turns on it.
+      - name: Check source pages
+        run: |
+          jq -r '[.entries[].sources[].url] | unique[]' docs/known-errors.json | while read -r url; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 20 "$url" || echo 0)
+            echo "{\"url\":\"$url\",\"status\":$code}"
+          done | jq -s . > /tmp/source-status.json
+          cat /tmp/source-status.json
+
+      - name: Run /docs-check with Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            /docs-check /tmp/source-status.json
+
+            Run the docs-check skill in .claude/skills/docs-check/SKILL.md against docs/known-errors.json.
+            The source-page status file is /tmp/source-status.json. This is a read-only check: do not edit
+            files or take any action. Return the structured output. Use an empty differences list if
+            everything still matches. Today is ${{ github.run_started_at }}.
+          claude_args: |
+            --model claude-sonnet-5-5
+            --max-turns 20
+            --mcp-config '{"mcpServers":{"blotato-docs":{"type":"http","url":"https://help.blotato.com/~gitbook/mcp"}}}'
+            --allowedTools "Read,mcp__blotato-docs__searchDocumentation,mcp__blotato-docs__getPage"
+            --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash,WebFetch,WebSearch,mcp__blotato-docs__sendFeedback"
+            --json-schema '{"type":"object","properties":{"checkedEntries":{"type":"integer"},"checkedSources":{"type":"integer"},"summary":{"type":"string"},"differences":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"kind":{"type":"string","enum":["source_missing","source_moved","wording_changed","wording_missing","code_changed","explanation_changed"]},"ours":{"type":"string"},"docs":{"type":"string"},"url":{"type":"string"},"suggestion":{"type":"string"}},"required":["entryId","kind","ours","docs","url","suggestion"]}}},"required":["checkedEntries","checkedSources","summary","differences"]}'
+
+  report:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the docs-drift issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REPORT: ${{ needs.check.outputs.report }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$REPORT" ] || ! echo "$REPORT" | jq -e . > /dev/null; then
+            echo "::error::The check job returned no report."; exit 1
+          fi
+          COUNT=$(echo "$REPORT" | jq '.differences | length')
+          echo "$REPORT" | jq '{checkedEntries, checkedSources, summary, differences: (.differences | length)}'
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No differences. Nothing to open."; exit 0
+          fi
+
+          BODY=$(echo "$REPORT" | jq -r --arg run "$RUN_URL" --arg date "$(date -u +%Y-%m-%d)" '
+            "The daily docs check found \(.differences | length) difference(s) between `docs/known-errors.json` and Blotato'"'"'s live docs (\($date)).\n\n" +
+            "\(.summary)\n\n" +
+            ([.differences[] |
+              "### `\(.entryId)` · \(.kind)\n" +
+              "- **Ours:** \(.ours)\n" +
+              "- **Docs now:** \(.docs)\n" +
+              "- **Page:** \(.url)\n" +
+              "- **Suggested change:** \(.suggestion)\n"
+            ] | join("\n")) +
+            "\nChecked \(.checkedEntries) entries and \(.checkedSources) source pages. [Workflow run](\($run))\n\n" +
+            "_Opened by the Daily docs check workflow. It never edits files: update `docs/known-errors.json` by hand, then regenerate the saved doctor results (see CLAUDE.md)._"')
+
+          gh label create docs-drift --color 8A3407 --description "known-errors.json differs from Blotato's live docs" 2>/dev/null || true
+          NUMBER=$(gh issue list --label docs-drift --state open --json number --jq '.[0].number // empty')
+          if [ -n "$NUMBER" ]; then
+            gh issue edit "$NUMBER" --body "$BODY"
+            gh issue comment "$NUMBER" --body "Updated by the docs check on $(date -u +%Y-%m-%d): $COUNT difference(s). [Run]($RUN_URL)"
+            echo "Updated issue #$NUMBER"
+          else
+            gh issue create --title "Known errors differ from Blotato's docs" --label docs-drift --body "$BODY"
+          fi
