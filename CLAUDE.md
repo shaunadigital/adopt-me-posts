@@ -25,10 +25,9 @@ Social posting tool for a dog rescue (made-up dogs), with a built-in post doctor
 | `POST /api/media/from-url` `{ url }` | `POST /v2/media` |
 | `POST /api/posts` `{ accountId, text, mediaUrls?, scheduledTime?, additionalPosts? }` | `POST /v2/posts` (Bluesky target) |
 | `GET /api/posts/:id` | `GET /v2/posts/{postSubmissionId}` |
+| `POST /api/caption` `{ dogSlug, previous? }` | none: Claude (`claude-sonnet-5-5`, effort low, `fallbacks: "default"`) writes a Bluesky caption under 300 characters, with no emoji and at most one hashtag. Returns `{ caption, characters, model, ms }`. Needs `ANTHROPIC_API_KEY`, which is set in Vercel Production only, so this route returns 503 under `vercel dev`. It's only called by "Rewrite with Claude", never on page load. There's a light per-IP limit of 12/min, kept in memory, so it is per instance and not shared across instances. |
 
 Routes pass Blotato's status and body straight through, so the frontend sees real error shapes.
-
-| `POST /api/caption` `{ dogSlug, previous? }` | none: Claude (`claude-sonnet-5-5`, effort low, `fallbacks: "default"`) writes a Bluesky caption under 300 characters, with no emoji and at most one hashtag. Returns `{ caption, characters, model, ms }`. Needs `ANTHROPIC_API_KEY`, which is set in Vercel Production only, so this route returns 503 under `vercel dev`. It's only called by "Rewrite with Claude", never on page load. There's a light per-IP limit of 12/min, kept in memory, so it is per instance and not shared across instances. |
 
 ## Main screen
 - The design spec is `~/Desktop/claudecode/jobs/blotato/design/DESIGN.md`, with `main-screen-reference.html` as the mockup. Tokens are CSS variables in `src/index.css`; components are in `src/components/`.
