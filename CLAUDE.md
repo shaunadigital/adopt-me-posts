@@ -30,7 +30,8 @@ Social posting tool for a dog rescue (made-up dogs), with a built-in post doctor
 Routes pass Blotato's status and body straight through, so the frontend sees real error shapes.
 
 ## Main screen
-- The design spec is `~/Desktop/claudecode/jobs/blotato/design/DESIGN.md`, with `main-screen-reference.html` as the mockup. Tokens are CSS variables in `src/index.css`; components are in `src/components/`.
+- The design spec is `~/Desktop/claudecode/jobs/blotato/design/DESIGN.md`, with `main-screen-reference.html` as the mockup. Components are in `src/components/`.
+- Colors: exactly the 15 in DESIGN.md, defined once as role variables at the top of `src/index.css` (`--ink`, `--raised-on-dark`, `--muted`, `--control`, `--border`, `--divider`, `--page`, `--soft`, `--panel`, `--accent`, `--accent-on-dark`, `--accent-tint`, `--fail`, `--fail-tint`, `--demo`). Use only these variables; no hex values elsewhere in CSS or components (SVGs use `currentColor`). Teal only means "on track" (plus links and the selected-row bar), rust only failures, amber only the Demo badge, no blue. Scheduled is an outlined gray pill. Inputs and controls sit on white so the `--control` border keeps 3:1. Inside the dark doctor panel, controls use `--control` borders and decorative boxes use `--muted`.
 - Dogs: `shared/dogs.ts` (used by the client and `api/caption.ts`; keep it free of Node and browser APIs). Each dog has a hand-written `starterCaption` (under 300 characters, no emoji) that shows on load. Photos are in `public/dogs/`, with credits in `CREDITS.md`.
 - Header wordmark per DESIGN.md: "adopt me" (Schibsted 800) + "/posts" (Plex Mono 500, mint), as text with aria-label "Adopt Me Posts".
 - `shared/` lives outside `api/` because `vercel dev` routes every `/api/*` URL to functions, so the browser can't load source files from there.

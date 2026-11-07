@@ -1,20 +1,25 @@
 /* Design tokens from jobs/blotato/design/DESIGN.md (direction C). */
 :root {
-  --ink: #121413;
-  --page: #edeeea;
-  --panel: #ffffff;
-  --border: #d6d9d3;
-  --divider: #e4e6e1;
-  --soft: #f6f7f4;
-  --muted: #4e5652;
-  --control-border: #c8ccc5;
-  --teal: #0b5d52;
-  --teal-hover: #074037;
-  --mint: #5fd1b3;
-  --mint-soft: #9bdccb;
-  --demo: #f2c94c;
-  --fail-bg: #fbe1d3;
-  --fail-text: #8a3407;
+  /* The 15 colors (DESIGN.md, revised 2026-11-07). Use only these variables below. */
+  /* Gray: structure only */
+  --ink: #121413; /* text, header, primary button, selected dog card, doctor panel */
+  --raised-on-dark: #1c201f; /* inputs and boxes inside the doctor panel */
+  --muted: #4e5652; /* muted text on light; decorative borders on dark */
+  --control: #8f9692; /* input and control borders (3:1 on white); muted text on dark */
+  --border: #d6d9d3; /* panel borders */
+  --divider: #e4e6e1; /* dividers, neutral pill, photo placeholder; body text on dark */
+  --page: #edeeea; /* page background */
+  --soft: #f6f7f4; /* preview pane, selected and hovered rows */
+  --panel: #ffffff; /* panels; white text on dark */
+  /* Teal: the one accent, "on track" */
+  --accent: #0b5d52; /* on light: meter, links, selected-row bar, Published text */
+  --accent-on-dark: #5fd1b3; /* on dark: /posts, doctor labels, mint buttons, account dot */
+  --accent-tint: #dcefe9; /* Published pill, completed step dot */
+  /* Rust: failures only */
+  --fail: #8a3407; /* Failed text, failing step dot, over-limit meter */
+  --fail-tint: #fbe1d3; /* Failed pill; failure text on dark */
+  /* Amber: demo only */
+  --demo: #f2c94c; /* Demo badge on the dark header */
 
   --font-ui: 'Schibsted Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -45,14 +50,22 @@ input {
 }
 
 a {
-  color: var(--teal);
+  color: var(--accent);
 }
 a:hover {
-  color: var(--teal-hover);
+  color: var(--ink);
+}
+
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.doctor ::placeholder {
+  color: var(--control);
 }
 
 :focus-visible {
-  outline: 3px solid var(--teal);
+  outline: 3px solid var(--ink);
   outline-offset: 2px;
 }
 
@@ -97,18 +110,18 @@ a:hover {
   font-family: var(--font-ui);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #ffffff;
+  color: var(--panel);
 }
 .wordmark__path {
   font-family: var(--font-mono);
   font-weight: 500;
   font-size: 0.85em;
-  color: var(--mint);
+  color: var(--accent-on-dark);
 }
 .site-header__org {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #a9b0ac;
+  color: var(--control);
 }
 .site-header__right {
   margin-left: auto;
@@ -125,14 +138,17 @@ a:hover {
   padding: 4px 10px;
   border-radius: 4px;
 }
+.account-chip__dot {
+  color: var(--accent-on-dark);
+}
 .account-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: #cfe9e2;
-  border: 1px solid #3a4a45;
+  color: var(--divider);
+  border: 1px solid var(--muted);
   padding: 3px 10px;
   border-radius: 4px;
 }
@@ -186,12 +202,12 @@ a:hover {
   cursor: pointer;
 }
 .dog-card:hover {
-  border-color: #9aa19c;
+  border-color: var(--control);
 }
 .dog-card[aria-pressed='true'] {
   background: var(--ink);
   border-color: var(--ink);
-  color: #fff;
+  color: var(--panel);
 }
 .dog-card__photo {
   width: 52px;
@@ -212,7 +228,7 @@ a:hover {
   color: var(--muted);
 }
 .dog-card[aria-pressed='true'] .dog-card__id {
-  color: var(--mint-soft);
+  color: var(--control);
 }
 .dog-card__name {
   font-weight: 700;
@@ -223,7 +239,7 @@ a:hover {
   color: var(--muted);
 }
 .dog-card[aria-pressed='true'] .dog-card__blurb {
-  color: #c9cfcb;
+  color: var(--divider);
 }
 
 /* ---- Columns ---- */
@@ -279,7 +295,7 @@ a:hover {
   min-height: 44px;
   padding: 0 14px;
   border-radius: 6px;
-  border: 1px solid var(--control-border);
+  border: 1px solid var(--control);
   background: var(--panel);
   color: var(--ink);
   font-weight: 500;
@@ -295,12 +311,12 @@ a:hover {
 .btn--primary {
   border: 0;
   background: var(--ink);
-  color: #fff;
+  color: var(--panel);
   font-weight: 600;
   padding: 0 20px;
 }
 .btn--primary:hover:not(:disabled) {
-  background: #2a2e2c;
+  background: var(--muted);
 }
 .btn--filter {
   min-height: 44px;
@@ -310,13 +326,13 @@ a:hover {
 .btn--filter[aria-pressed='true'] {
   background: var(--ink);
   border-color: var(--ink);
-  color: #fff;
+  color: var(--panel);
 }
 .select {
   min-height: 44px;
   padding: 0 10px;
   border-radius: 6px;
-  border: 1px solid var(--control-border);
+  border: 1px solid var(--control);
   background: var(--panel);
 }
 
@@ -343,7 +359,7 @@ a:hover {
   flex-grow: 1;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid var(--control-border);
+  border: 1px solid var(--control);
   background: var(--panel);
   color: var(--ink);
   resize: vertical;
@@ -353,7 +369,7 @@ a:hover {
   color: var(--muted);
 }
 .composer__textarea[aria-invalid='true'] {
-  border-color: var(--fail-text);
+  border-color: var(--fail);
 }
 .meter {
   display: flex;
@@ -369,11 +385,11 @@ a:hover {
 }
 .meter__fill {
   height: 6px;
-  background: var(--teal);
+  background: var(--accent);
   transition: width 120ms ease-out;
 }
 .meter__fill--over {
-  background: var(--fail-text);
+  background: var(--fail);
 }
 .meter__count {
   font-family: var(--font-mono);
@@ -387,13 +403,13 @@ a:hover {
   color: var(--muted);
 }
 .meter__count--over {
-  color: var(--fail-text);
+  color: var(--fail);
   font-weight: 600;
 }
 .inline-error {
   margin: 0;
   font-size: 13px;
-  color: var(--fail-text);
+  color: var(--fail);
 }
 .composer__preview {
   flex: 1 1 280px;
@@ -406,8 +422,8 @@ a:hover {
   gap: 12px;
 }
 .bsky {
-  background: #fff;
-  border: 1px solid #dde1da;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
   display: flex;
@@ -423,8 +439,8 @@ a:hover {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--teal);
-  color: #fff;
+  background: var(--ink);
+  color: var(--panel);
   font-size: 12px;
   font-weight: 700;
   display: flex;
@@ -485,7 +501,7 @@ a:hover {
   display: inline-flex;
 }
 .send__pick input[aria-invalid='true'] {
-  border-color: var(--fail-text);
+  border-color: var(--fail);
 }
 .send__note {
   font-size: 13px;
@@ -518,20 +534,21 @@ a:hover {
   white-space: nowrap;
 }
 .pill--published {
-  background: #dcefe9;
-  color: #0b5d52;
+  background: var(--accent-tint);
+  color: var(--accent);
 }
 .pill--scheduled {
-  background: #e3e9f6;
-  color: #23417a;
+  background: var(--panel);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--control);
 }
 .pill--in-progress {
-  background: #eceeea;
-  color: #3a403d;
+  background: var(--divider);
+  color: var(--muted);
 }
 .pill--failed {
-  background: var(--fail-bg);
-  color: var(--fail-text);
+  background: var(--fail-tint);
+  color: var(--fail);
 }
 
 /* ---- Posts table ---- */
@@ -557,15 +574,12 @@ a:hover {
 }
 .posts-table td {
   padding: 12px 12px 12px 0;
-  border-bottom: 1px solid #eef0ec;
+  border-bottom: 1px solid var(--divider);
   vertical-align: top;
 }
 .posts-table td:last-child {
   padding-right: 0;
   text-align: right;
-}
-.posts-table tr.row--failed td {
-  background: #fdf6f2;
 }
 .cell-dog {
   font-weight: 600;
@@ -583,7 +597,7 @@ a:hover {
   display: block;
   margin-top: 4px;
   font-size: 13px;
-  color: var(--fail-text);
+  color: var(--fail);
 }
 .cell-when {
   color: var(--muted);
@@ -647,21 +661,21 @@ a:hover {
   line-height: 1;
 }
 .step__dot--ok {
-  background: #dcefe9;
-  color: var(--teal);
+  background: var(--accent-tint);
+  color: var(--accent);
 }
 .step__dot--failed {
-  background: var(--fail-text);
-  color: #fff;
+  background: var(--fail);
+  color: var(--panel);
 }
 .step__dot--waiting {
-  border: 2px solid var(--teal);
+  border: 2px solid var(--accent);
   border-right-color: transparent;
   animation: spin 1s linear infinite;
 }
 .step__dot--scheduled {
-  background: #e3e9f6;
-  border: 2px solid #23417a;
+  background: var(--panel);
+  border: 2px solid var(--control);
 }
 .step__dot--skipped {
   border: 2px dashed var(--border);
@@ -674,7 +688,7 @@ a:hover {
 @media (prefers-reduced-motion: reduce) {
   .step__dot--waiting {
     animation: none;
-    border-right-color: var(--teal);
+    border-right-color: var(--accent);
     border-style: dotted;
   }
 }
@@ -717,7 +731,7 @@ a:hover {
 }
 .step--failed .step__label,
 .step--failed .step__note {
-  color: var(--fail-text);
+  color: var(--fail);
 }
 .trace__id {
   font-size: 12px;
@@ -735,14 +749,14 @@ a:hover {
   background: var(--soft);
 }
 .posts-table tr.row--failed:hover td {
-  background: #fbefe8;
+  background: var(--soft);
 }
 .posts-table tr.row--selected td,
 .posts-table tr.row--selected:hover td {
-  background: #e7f2ee;
+  background: var(--soft);
 }
 .posts-table tr.row--selected td:first-child {
-  box-shadow: inset 4px 0 0 var(--teal);
+  box-shadow: inset 4px 0 0 var(--accent);
 }
 .row-select {
   appearance: none;
@@ -770,7 +784,7 @@ a:hover {
   font-size: 11px;
   font-weight: 500;
   color: var(--muted);
-  border: 1px solid var(--control-border);
+  border: 1px solid var(--control);
   border-radius: 4px;
   padding: 0 5px;
   vertical-align: 1px;
@@ -793,13 +807,13 @@ a:hover {
   min-height: 44px;
   font: inherit;
   font-weight: 600;
-  color: var(--teal);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
 }
 .link-button:hover {
-  color: var(--teal-hover);
+  color: var(--ink);
 }
 .doctor {
   margin-top: auto;
@@ -816,32 +830,36 @@ a:hover {
   align-items: center;
   gap: 8px;
 }
+.doctor__icon {
+  color: var(--accent-on-dark);
+  flex-shrink: 0;
+}
 .doctor__title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--panel);
 }
 .doctor__known {
   margin-left: auto;
   font-size: 13px;
-  color: var(--mint-soft);
+  color: var(--accent-on-dark);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
 .doctor a {
-  color: var(--mint-soft);
+  color: var(--accent-on-dark);
 }
 .doctor a:hover {
-  color: #c8efe4;
+  color: var(--panel);
 }
 .doctor :focus-visible {
-  outline-color: var(--mint);
+  outline-color: var(--panel);
 }
 .doctor p {
   margin: 0;
-  color: #c9cfcb;
+  color: var(--divider);
 }
 .doctor__body {
   display: flex;
@@ -854,30 +872,30 @@ a:hover {
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
-  background: #1c201f;
-  border: 1px solid #3a4a45;
+  background: var(--raised-on-dark);
+  border: 1px solid var(--muted);
 }
 .mode-dark {
   min-height: 40px;
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #c9cfcb;
+  color: var(--divider);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 }
 .mode-dark[aria-pressed='true'] {
-  background: var(--mint);
-  color: #0a2620;
+  background: var(--panel);
+  color: var(--ink);
   font-weight: 600;
 }
 .mode-dark:hover:not([aria-pressed='true']) {
-  color: #fff;
+  color: var(--panel);
 }
 .doctor__hint {
   font-size: 12px;
-  color: #a9b0ac !important;
+  color: var(--control) !important;
 }
 .doctor__examples {
   display: flex;
@@ -889,7 +907,7 @@ a:hover {
   min-height: 44px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid #3a4a45;
+  border: 1px solid var(--control);
   background: transparent;
   color: var(--divider);
   font: inherit;
@@ -897,12 +915,12 @@ a:hover {
   cursor: pointer;
 }
 .chip-dark:hover:not(:disabled) {
-  border-color: var(--mint);
+  border-color: var(--panel);
 }
 .chip-dark[aria-pressed='true'] {
-  border-color: var(--mint);
-  color: #fff;
-  background: #1f3a33;
+  border-color: var(--panel);
+  color: var(--panel);
+  background: var(--raised-on-dark);
 }
 .doctor__lookup {
   display: flex;
@@ -911,13 +929,13 @@ a:hover {
   gap: 4px 12px;
   padding: 10px 12px;
   border-radius: 6px;
-  background: #1c201f;
-  border: 1px solid #3a4a45;
+  background: var(--raised-on-dark);
+  border: 1px solid var(--muted);
   font-size: 13px;
   color: var(--divider);
 }
 .doctor__lookup strong {
-  color: #fff;
+  color: var(--panel);
 }
 .doctor__lookup .link-dark {
   margin-left: auto;
@@ -929,7 +947,7 @@ a:hover {
   gap: 8px 12px;
 }
 .doctor__dl dt {
-  color: var(--mint);
+  color: var(--accent-on-dark);
   font-weight: 600;
 }
 .doctor__dl dd {
@@ -939,36 +957,36 @@ a:hover {
 .doctor__label {
   display: block;
   font-weight: 600;
-  color: #fff !important;
+  color: var(--panel) !important;
   margin: 4px 0 0;
 }
 .doctor__textarea {
   width: 100%;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #3a4a45;
-  background: #1c201f;
+  border: 1px solid var(--control);
+  background: var(--raised-on-dark);
   color: var(--divider);
   font-size: 13px;
   resize: vertical;
 }
 .doctor__textarea[aria-invalid='true'] {
-  border-color: #f0a37e;
+  border-color: var(--fail-tint);
 }
 .doctor__count {
   font-size: 12px;
-  color: #a9b0ac;
+  color: var(--control);
   align-self: flex-end;
 }
 .doctor__count--over {
-  color: #f0a37e;
+  color: var(--fail-tint);
 }
 .doctor__trim {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  border: 1px solid #3a4a45;
+  border: 1px solid var(--muted);
   border-radius: 6px;
 }
 .doctor__actions {
@@ -990,21 +1008,22 @@ a:hover {
 }
 .btn-mint {
   border: 0;
-  background: var(--mint);
-  color: #0a2620;
+  background: var(--accent-on-dark);
+  color: var(--ink);
   font-weight: 600;
 }
 .btn-mint:hover:not(:disabled) {
-  background: #7ddcc3;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .btn-dark {
-  border: 1px solid #3a4a45;
+  border: 1px solid var(--control);
   background: transparent;
   color: var(--divider);
   font-weight: 500;
 }
 .btn-dark:hover:not(:disabled) {
-  border-color: #6b7a75;
+  border-color: var(--panel);
 }
 .btn-mint:disabled,
 .btn-dark:disabled {
@@ -1018,7 +1037,7 @@ a:hover {
   padding: 0;
   min-height: 44px;
   font: inherit;
-  color: var(--mint-soft);
+  color: var(--accent-on-dark);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -1029,9 +1048,9 @@ a:hover {
   overflow: auto;
   padding: 12px;
   border-radius: 6px;
-  background: #1c201f;
-  border: 1px solid #3a4a45;
-  color: #cfe9e2;
+  background: var(--raised-on-dark);
+  border: 1px solid var(--muted);
+  color: var(--divider);
   font-size: 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1054,14 +1073,16 @@ a:hover {
 }
 .doctor__note {
   font-size: 13px;
-  color: #f2c94c !important;
+  color: var(--divider) !important;
+  border-left: 3px solid var(--control);
+  padding-left: 10px;
 }
 .doctor__error {
-  color: #f0a37e !important;
+  color: var(--fail-tint) !important;
 }
 .doctor__meta {
   font-size: 11px;
-  color: #7f8984 !important;
+  color: var(--control) !important;
 }
 
 /* ---- Known errors page ---- */
@@ -1114,9 +1135,9 @@ a:hover {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #fff4cf;
-  color: #6b4e00;
-  border: 1px solid #e8cf73;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--control);
 }
 .known__wording {
   margin: 0;
@@ -1142,7 +1163,7 @@ a:hover {
 }
 .known__dl dt {
   font-weight: 600;
-  color: var(--teal);
+  color: var(--ink);
 }
 .known__dl dd {
   margin: 0;
@@ -1151,7 +1172,7 @@ a:hover {
   margin: 0;
   font-size: 13px;
   color: var(--muted);
-  border-left: 3px solid #e8cf73;
+  border-left: 3px solid var(--control);
   padding-left: 10px;
 }
 .known__sources {
@@ -1220,7 +1241,7 @@ a:hover {
       'when when';
     gap: 2px 8px;
     padding: 12px 8px 12px 0;
-    border-bottom: 1px solid #eef0ec;
+    border-bottom: 1px solid var(--divider);
   }
   .posts-table td {
     display: block;
@@ -1228,12 +1249,9 @@ a:hover {
     border: 0;
     background: transparent !important;
   }
-  .posts-table tr.row--failed {
-    background: #fdf6f2;
-  }
   .posts-table tr.row--selected {
-    background: #e7f2ee;
-    box-shadow: inset 4px 0 0 var(--teal);
+    background: var(--soft);
+    box-shadow: inset 4px 0 0 var(--accent);
   }
   .posts-table tr.row--selected td:first-child {
     box-shadow: none;
