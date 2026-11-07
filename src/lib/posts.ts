@@ -40,7 +40,29 @@ export interface PostRecord {
   /** When the post was handed to Blotato's queue (create step done, or its scheduled time). */
   queuedAt?: string
   checks?: number // status checks so far
+  /** Post doctor result, cached once it has been generated. */
+  doctor?: DoctorResult
 }
+
+export interface DoctorSource {
+  title: string
+  url: string
+}
+
+export interface DoctorResult {
+  matched: boolean
+  entries: { id: string; title: string; inDocs: boolean; docsNote?: string }[]
+  cause: string
+  fix: string
+  reply: string
+  sources: DoctorSource[]
+  checks: string[]
+  model: string
+  generatedAt: string
+}
+
+/** Known-error ids that "Trim and resend" can fix. */
+export const TOO_LONG_IDS = ['text-too-long-20005', 'demo-bluesky-too-long']
 
 const KEY = 'adopt-me-posts:posts:v1'
 const MAX = 100

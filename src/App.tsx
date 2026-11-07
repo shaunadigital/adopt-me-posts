@@ -4,10 +4,13 @@ import { Composer } from './components/Composer'
 import { DogPicker } from './components/DogPicker'
 import { Header } from './components/Header'
 import { PostsPanel } from './components/PostsPanel'
+import { KnownErrorsPage } from './components/KnownErrorsPage'
+import { PostDoctor, type TrimState } from './components/PostDoctor'
 import { TracePanel } from './components/TracePanel'
 import {
   ApiError,
   createPost,
+  diagnose,
   getAccounts,
   getConfig,
   getPostStatus,
@@ -81,6 +84,18 @@ function App() {
   const [sending, setSending] = useState(false)
   const [sendStatus, setSendStatus] = useState<string | null>(null)
 
+  // Two views: the main screen, and the Known errors page at #known-errors.
+  const routeFromHash = () => (window.location.hash === '#known-errors' ? 'known-errors' : 'main')
+  const [route, setRoute] = useState<'main' | 'known-errors'>(routeFromHash)
+  useEffect(() => {
+    const onHash = () => {
+      setRoute(routeFromHash())
+      window.scrollTo(0, 0)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   const hadSavedPosts = useRef(posts.length > 0)
   const seeded = useRef(false)
 
@@ -124,7 +139,9 @@ function App() {
       setPosts((ps) => ps.filter((p) => !p.example))
       return
     }
-    if (!hadSavedPosts.current) seedExamples()
+    // Examples saved before the post doctor existed have no saved diagnosis: swap in fresh ones.
+    const staleExamples = loadPosts().some((p) => p.example && p.status === 'failed' && !p.doctor)
+    if (!hadSavedPosts.current || staleExamples) seedExamples()
   }, [configLoaded, demoMode, seedExamples])
 
   // ---- Status updates ----
@@ -298,11 +315,12 @@ function App() {
   // ---- Posting ----
 
   /** Upload the dog's photo, then create the post. Adds it to the top of "All posts" and selects it. */
-  async function post(scheduledTime?: string) {
+  /** override: post this dog and text instead of the composer's (used by "Trim and resend"). */
+  async function post(scheduledTime?: string, override?: { dog: Dog; text: string; source: CaptionSource }) {
     if (!account || sending) return
-    const postDog = dog
-    const text = caption
-    const source = captionSource[postDog.slug]
+    const postDog = override?.dog ?? dog
+    const text = override?.text ?? caption
+    const source = override?.source ?? captionSource[postDog.slug]
     const createdAt = new Date().toISOString()
     const captionStep: TraceStep = {
       key: 'caption',
@@ -452,8 +470,65 @@ function App() {
     }
   }
 
-  const handle = account?.username.replace(/^@/, '') ?? null
+  // ---- Post doctor ----
+
+  const [doctorLoading, setDoctorLoading] = useState<Record<string, boolean>>({})
+  const [doctorErrors, setDoctorErrors] = useState<Record<string, string | null>>({})
+  const doctorTried = useRef(new Set<string>())
+  const [trim, setTrim] = useState<TrimState>({ status: 'idle', text: '' })
+
+  const runDoctor = useCallback(
+    async (p: PostRecord) => {
+      setDoctorLoading((l) => ({ ...l, [p.localId]: true }))
+      setDoctorErrors((e) => ({ ...e, [p.localId]: null }))
+      try {
+        const result = await diagnose(p)
+        updatePost(p.localId, (cur) => ({ ...cur, doctor: result }))
+      } catch (err) {
+        setDoctorErrors((e) => ({ ...e, [p.localId]: `The post doctor couldn't run: ${describeError(err).text}` }))
+      } finally {
+        setDoctorLoading((l) => ({ ...l, [p.localId]: false }))
+      }
+    },
+    [updatePost],
+  )
+
   const current = posts.find((p) => p.localId === selectedPost) ?? null
+
+  // Diagnose a failed post the first time it's selected, once; the result is cached on the post.
+  useEffect(() => {
+    if (!current || current.status !== 'failed' || current.doctor || doctorTried.current.has(current.localId)) return
+    // Example posts ship with a saved diagnosis and never call Claude on load.
+    if (current.example) return
+    doctorTried.current.add(current.localId)
+    void runDoctor(current)
+  }, [current, runDoctor])
+
+  // A trim proposal belongs to one post; drop it when the selection changes.
+  useEffect(() => setTrim({ status: 'idle', text: '' }), [selectedPost])
+
+  async function startTrim() {
+    if (!current) return
+    setTrim({ status: 'writing', text: '' })
+    try {
+      const res = await writeCaption(current.dogSlug, undefined, current.caption)
+      setTrim({ status: 'ready', text: res.data.caption })
+    } catch (err) {
+      setTrim({ status: 'error', text: '', error: `Couldn't shorten the caption: ${describeError(err).text}` })
+    }
+  }
+
+  async function postTrimmed() {
+    const d = current && DOGS.find((x) => x.slug === current.dogSlug)
+    if (!d || trim.status !== 'ready') return
+    const text = trim.text.trim()
+    setTrim({ status: 'idle', text: '' })
+    await post(undefined, { dog: d, text, source: { kind: 'claude', at: new Date().toISOString() } })
+  }
+
+  const handle = account?.username.replace(/^@/, '') ?? null
+  // Known errors page (reached from the post doctor).
+  if (route === 'known-errors') return <KnownErrorsPage demoMode={demoMode} handle={handle} />
 
   return (
     <>
@@ -496,7 +571,27 @@ function App() {
             />
           </div>
           <div className="columns__right">
-            <TracePanel post={current} demoMode={demoMode} />
+            <TracePanel
+              post={current}
+              demoMode={demoMode}
+              doctor={
+                <PostDoctor
+                  post={current}
+                  loading={!!(current && doctorLoading[current.localId])}
+                  error={current ? (doctorErrors[current.localId] ?? null) : null}
+                  onRetry={() => current && void runDoctor(current)}
+                  onReplyChange={(text) =>
+                    current && updatePost(current.localId, (p) => (p.doctor ? { ...p, doctor: { ...p.doctor, reply: text } } : p))
+                  }
+                  trim={trim}
+                  sending={sending}
+                  onTrimStart={() => void startTrim()}
+                  onTrimChange={(text) => setTrim((t) => ({ ...t, text }))}
+                  onTrimPost={() => void postTrimmed()}
+                  onTrimCancel={() => setTrim({ status: 'idle', text: '' })}
+                />
+              }
+            />
           </div>
         </div>
       </main>

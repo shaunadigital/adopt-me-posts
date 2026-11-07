@@ -38,7 +38,9 @@ export const DEMO_MESSAGES = {
   mediaFetch:
     'Blotato could not fetch the media URL. Confirm the URL loads or downloads without signing in, then try again.',
   urlMissing: '"url" is missing. Add it as a top-level property with the public URL of the media to upload.',
-  tooLong: (n: number) => `Post text is ${n} characters. Bluesky allows ${BLUESKY_CHAR_LIMIT} characters per post.`,
+  // Error Reference, Plan Limit Errors (error code 20005). The docs don't show how the platform name is written.
+  tooLong: (_n: number) =>
+    `Text length exceeds the character limit of ${BLUESKY_CHAR_LIMIT} characters for platform bluesky (error code 20005)`,
 } as const
 
 type DemoReply = { status: number; body: unknown }

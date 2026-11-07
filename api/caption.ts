@@ -1,10 +1,12 @@
-// POST /api/caption  { dogSlug, previous? } → { caption, characters, model, ms }
+// POST /api/caption  { dogSlug, previous?, trimFrom? } → { caption, characters, model, ms }
+// trimFrom: shorten that caption under 280 characters (post doctor's "Trim and resend").
 // Claude writes a Bluesky caption for one dog. `previous` is the current caption, sent by
 // "Rewrite with Claude" so the new one takes a different angle.
 import Anthropic from '@anthropic-ai/sdk'
 import { RESCUE_NAME, findDog } from '../shared/dogs.js'
 import { countGraphemes } from './_lib/demo.js'
 import { json, readJson } from './_lib/http.js'
+import { rateLimited } from './_lib/rateLimit.js'
 
 const MODEL = 'claude-sonnet-5-5'
 const LIMIT = 300
@@ -20,18 +22,6 @@ Write one caption for the dog described by the user. Rules:
 - Don't invent facts beyond what you're given, and don't name a website, phone number or date.
 
 Reply with the caption text only, no quotes and no preamble.`
-
-// Light abuse guard: this route spends API credit, so cap requests per IP on each warm instance.
-const WINDOW_MS = 60_000
-const MAX_PER_WINDOW = 12
-const hits = new Map<string, number[]>()
-function rateLimited(ip: string): boolean {
-  const now = Date.now()
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS)
-  recent.push(now)
-  hits.set(ip, recent)
-  return recent.length > MAX_PER_WINDOW
-}
 
 const EMOJI = /\p{Extended_Pictographic}️?/gu
 
@@ -50,20 +40,23 @@ export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY?.trim()) {
     return json(503, { message: 'Caption writing is not set up: ANTHROPIC_API_KEY is missing on the server.' })
   }
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
-  if (rateLimited(ip)) return json(429, { message: 'Too many captions in a minute. Wait a moment and try again.' })
+  if (rateLimited(req, 'caption', 12)) return json(429, { message: 'Too many captions in a minute. Wait a moment and try again.' })
 
   const body = await readJson(req)
   if (body instanceof Response) return body
   const dog = typeof body.dogSlug === 'string' ? findDog(body.dogSlug) : undefined
   if (!dog) return json(400, { message: 'Unknown dog.' })
   const previous = typeof body.previous === 'string' ? body.previous.slice(0, 600).trim() : ''
+  // "Trim and resend" from the post doctor: shorten this exact caption instead of writing a new one.
+  const trimFrom = typeof body.trimFrom === 'string' ? body.trimFrom.slice(0, 1200).trim() : ''
 
   const pronoun = dog.sex === 'female' ? 'she/her' : 'he/him'
   let prompt = `Dog: ${dog.name} (${pronoun}), ${dog.age} years old, ${dog.breed}, ${dog.size}.
 What the foster says:
 ${dog.facts.map((f) => `- ${f}`).join('\n')}`
-  if (previous) {
+  if (trimFrom) {
+    prompt += `\n\nThis caption was too long for Bluesky (${countGraphemes(trimFrom)} characters, limit 300). Shorten it to under 280 characters. Keep its voice, its facts and its closing next step, cut words rather than changing the meaning, and add nothing new:\n${trimFrom}`
+  } else if (previous) {
     prompt += `\n\nThe current caption is below. Write a fresh one with a different opening and a different detail up front:\n${previous}`
   }
 

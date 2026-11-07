@@ -1,4 +1,5 @@
 // Thin fetch helpers for the app's own /api routes.
+import type { DoctorResult, PostRecord } from './posts'
 
 export interface AppConfig {
   demoMode: boolean
@@ -95,11 +96,29 @@ export const getConfig = () => request<AppConfig>('/api/config')
 
 export const getAccounts = () => request<{ items: Account[] }>('/api/accounts?platform=bluesky')
 
-export const writeCaption = (dogSlug: string, previous?: string) =>
+/** previous: rewrite with a new angle. trimFrom: shorten that caption (post doctor's "Trim and resend"). */
+export const writeCaption = (dogSlug: string, previous?: string, trimFrom?: string) =>
   requestFull<CaptionResult>('/api/caption', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dogSlug, previous }),
+    body: JSON.stringify({ dogSlug, previous, trimFrom }),
+  })
+
+/** POST /api/doctor with a failed post's evidence. */
+export const diagnose = (p: PostRecord) =>
+  request<DoctorResult>('/api/doctor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dogName: p.dogName,
+      caption: p.caption,
+      failedStep: p.failedStep,
+      httpStatus: p.httpStatus,
+      error: p.error,
+      rawError: p.rawError ?? null,
+      // Notes and codes only; the doctor doesn't need timestamps or links.
+      trace: p.trace.map(({ key, label, state, meta, note }) => ({ key, label, state, meta, note })),
+    }),
   })
 
 /** Uploads a file's bytes through POST /api/media/upload. Returns Blotato's public media URL. */

@@ -1,0 +1,291 @@
+{
+  "about": "Blotato errors this app can run into, collected from Blotato's own docs. Each entry quotes the documented wording, explains the cause and fix in plain words using only what the cited pages say, and links the exact page. Entries marked inDocs: false use wording our demo invented and are labeled 'not in Blotato's docs'. The post doctor (/api/doctor) only cites sources listed here.",
+  "collected": "2026-11-07",
+  "sourcesIndex": "https://help.blotato.com/llms.txt",
+  "entries": [
+    {
+      "id": "invalid-api-key",
+      "title": "Invalid or wrong API key (401)",
+      "wording": [
+        "Authorization failed - please check your credentials",
+        "Wrong Blotato API Key",
+        "401, \"invalid API key\""
+      ],
+      "match": { "httpStatus": [401], "codes": [], "patterns": ["invalid api key", "authorization failed", "wrong blotato api key", "invalid credentials"] },
+      "stage": "Any request to Blotato",
+      "cause": "The API key sent with the request doesn't match the account's real key. A common reason is a key copied without its trailing '=' characters, or a key with extra spaces.",
+      "fix": "Copy the full key again with the 'Copy API Key' button in Settings > API, keeping any '=' at the end, and check it with GET /v2/users/me.",
+      "sources": [
+        { "title": "Error Reference: API Errors", "url": "https://help.blotato.com/support/errors" },
+        { "title": "API FAQs: Why am I getting a 401, \"invalid API key\"?", "url": "https://help.blotato.com/start-with-an-ai-agent/faqs" },
+        { "title": "Access and authentication", "url": "https://help.blotato.com/api-and-mcp-concepts/authentication" }
+      ],
+      "inDocs": true,
+      "docsNote": "Our demo returns { \"message\": \"Invalid API key\" }. The docs name the error as 401 \"invalid API key\" but don't show the exact response body."
+    },
+    {
+      "id": "subscription-403",
+      "title": "Subscription problem (403)",
+      "wording": ["Subscription-related 403"],
+      "match": { "httpStatus": [403], "codes": [], "patterns": ["subscription"] },
+      "stage": "Any request to Blotato",
+      "cause": "API access needs a paid Blotato plan, and a 403 with a subscription message means the plan doesn't currently allow the request.",
+      "fix": "Check the plan in Billing (my.blotato.com/settings/billing).",
+      "sources": [
+        { "title": "Errors and retries", "url": "https://help.blotato.com/api-and-mcp-concepts/error-handling" },
+        { "title": "Access and authentication", "url": "https://help.blotato.com/api-and-mcp-concepts/authentication" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "account-not-found",
+      "title": "Account not found (error code 5000)",
+      "wording": ["Account N not found (error code 5000)", "Account [ID] not found"],
+      "match": { "httpStatus": [], "codes": [5000], "patterns": ["not found (error code 5000)", "account not found"], "regex": ["account \\S+ not found"] },
+      "stage": "Creating the post",
+      "cause": "The accountId doesn't belong to the API key that was used, the account was disconnected, or the ID is from another platform.",
+      "fix": "List the accounts with the same API key (GET /v2/users/me/accounts), pick the returned ID for the right platform, and send the post again.",
+      "sources": [
+        { "title": "Error Reference: Plan Limit Errors and API Errors", "url": "https://help.blotato.com/support/errors" },
+        { "title": "Accounts and identifiers: Account not found", "url": "https://help.blotato.com/api-and-mcp-concepts/accounts-and-identifiers" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "invalid-account-credentials",
+      "title": "Invalid account credentials (failed post)",
+      "wording": ["Invalid account credentials"],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["invalid account credentials"] },
+      "stage": "Publishing, after Blotato accepted the post",
+      "cause": "Blotato reported that it couldn't use the connected social account's login. Blotato's guide shows this message on a failed post but doesn't explain it; the closest documented case is an account whose authorization expired and needs reconnecting.",
+      "fix": "Reconnect the social account in Blotato's Accounts page, list accounts again to get the current ID, then send the post again.",
+      "sources": [
+        { "title": "API reference for agents: Async Workflows, Error Handling (example failed post)", "url": "https://help.blotato.com/start-with-an-ai-agent/llm" },
+        { "title": "Error Reference: Connection Errors, Account requires reconnect", "url": "https://help.blotato.com/support/errors" }
+      ],
+      "inDocs": true,
+      "docsNote": "The message itself is in Blotato's guide as an example. The cause is taken from the closest documented error (Account requires reconnect), not from an explanation of this exact message."
+    },
+    {
+      "id": "account-requires-reconnect",
+      "title": "Account requires reconnect",
+      "wording": ["Account requires reconnect"],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["requires reconnect", "reconnect"] },
+      "stage": "Publishing",
+      "cause": "The social account's authorization expired, or the account needs some other manual reconnect or confirmation.",
+      "fix": "Go to Accounts in Blotato, click Reconnect on that account, then try again.",
+      "sources": [{ "title": "Error Reference: Connection Errors", "url": "https://help.blotato.com/support/errors" }],
+      "inDocs": true
+    },
+    {
+      "id": "text-too-long-20005",
+      "title": "Text over the platform's character limit (error code 20005)",
+      "wording": ["Text length exceeds the character limit of N characters for platform X (error code 20005)"],
+      "match": { "httpStatus": [], "codes": [20005], "patterns": ["text length exceeds the character limit", "error code 20005"] },
+      "stage": "Publishing",
+      "cause": "The post text is longer than the platform allows. Bluesky's limit is 300 characters per post. Blotato counts emoji and full-width characters as 2.",
+      "fix": "Shorten the text (and any thread posts named in the error details), then send it again.",
+      "sources": [
+        { "title": "Error Reference: Plan Limit Errors", "url": "https://help.blotato.com/support/errors" },
+        { "title": "Media Requirements: Bluesky (300 characters per post)", "url": "https://help.blotato.com/rest-api-reference/publish-post/media" }
+      ],
+      "inDocs": true,
+      "docsNote": "The docs don't say whether this comes back when the post is created or later as the post's errorMessage, or how the platform name is written. Our demo returns it as the failed post's errorMessage with the platform written as 'bluesky'."
+    },
+    {
+      "id": "demo-bluesky-too-long",
+      "title": "Bluesky text too long (demo wording, older posts)",
+      "wording": ["Post text is N characters. Bluesky allows 300 characters per post."],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["bluesky allows 300 characters"] },
+      "stage": "Publishing",
+      "cause": "The post text is longer than Bluesky's 300-character limit.",
+      "fix": "Shorten the text to 300 characters or fewer, then send it again.",
+      "sources": [
+        { "title": "Media Requirements: Bluesky (300 characters per post)", "url": "https://help.blotato.com/rest-api-reference/publish-post/media" },
+        { "title": "Error Reference: Plan Limit Errors (error code 20005)", "url": "https://help.blotato.com/support/errors" }
+      ],
+      "inDocs": false,
+      "docsNote": "not in Blotato's docs. This wording was invented by this app's demo before we found error 20005 in the Error Reference. The demo now uses the documented 20005 wording; this entry stays so posts saved earlier still get a diagnosis."
+    },
+    {
+      "id": "media-fetch-90009",
+      "title": "Blotato couldn't fetch the media URL (code 90009)",
+      "wording": ["Blotato could not fetch the media URL. Confirm the URL loads or downloads without signing in, then try again."],
+      "match": { "httpStatus": [], "codes": [90009], "patterns": ["could not fetch the media url"] },
+      "stage": "Uploading media, or publishing with mediaUrls",
+      "cause": "Blotato couldn't download the media from the URL it was given.",
+      "fix": "Open the URL in a private browser window and confirm it loads or downloads the file without signing in. For files on your computer, use the presigned upload and post with the returned publicUrl.",
+      "sources": [{ "title": "Upload Media: error codes", "url": "https://help.blotato.com/rest-api-reference/publish-post/upload-media-v2-media" }],
+      "inDocs": true
+    },
+    {
+      "id": "unknown-9999",
+      "title": "Unknown error (code 9999)",
+      "wording": ["An unknown error occurred."],
+      "match": { "httpStatus": [], "codes": [9999], "patterns": ["an unknown error occurred"] },
+      "stage": "Uploading media",
+      "cause": "Blotato hit an error it couldn't name. The docs list it as 'Unknown error' with HTTP 500.",
+      "fix": "Keep the response and request ID, check Blotato's Logs for the request, and retry reads with a delay. After a create request, check for existing work before sending it again.",
+      "sources": [
+        { "title": "Upload Media: error codes", "url": "https://help.blotato.com/rest-api-reference/publish-post/upload-media-v2-media" },
+        { "title": "Errors and retries", "url": "https://help.blotato.com/api-and-mcp-concepts/error-handling" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "media-storage",
+      "title": "Couldn't save media to storage",
+      "wording": ["Could not upload media to storage", "Failed to upload stream to Supabase"],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["could not upload media to storage", "failed to upload stream to supabase"] },
+      "stage": "Publishing with mediaUrls",
+      "cause": "Blotato fetched the media URL but couldn't read it as a media file, almost always because the file isn't publicly reachable (for example a login or preview page), or it's over the plan's size cap.",
+      "fix": "Open the URL in a private window and confirm it downloads the raw file. Don't use Google Drive or Dropbox share links. For local files, use the presigned upload and post with the returned publicUrl.",
+      "sources": [{ "title": "Error Reference: API Errors", "url": "https://help.blotato.com/support/errors" }],
+      "inDocs": true
+    },
+    {
+      "id": "media-metadata",
+      "title": "Couldn't read media metadata",
+      "wording": ["Failed to read media metadata. Is the file accessible and a valid media file?"],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["failed to read media metadata"] },
+      "stage": "Publishing with media",
+      "cause": "Blotato couldn't get usable details (like format and size) from the media file.",
+      "fix": "Check that the file is reachable from a server (not just your browser), that it's a valid media file, and that the upload finished.",
+      "sources": [
+        { "title": "Error Reference: API Errors", "url": "https://help.blotato.com/support/errors" },
+        { "title": "Media uploads and conversion", "url": "https://help.blotato.com/api-and-mcp-concepts/media-uploads-and-conversion" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "unsupported-media-type",
+      "title": "Unsupported media type (failed post)",
+      "wording": ["Unsupported media type"],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["unsupported media type", "invalid file format"] },
+      "stage": "Publishing, after Blotato accepted the post",
+      "cause": "The platform didn't accept the file's format. Blotato's docs show this message on a failed post; the related 'Invalid File Format' error says the file format must be valid for the social platform.",
+      "fix": "Check the file against the platform's media requirements (Bluesky: up to 4 images or 1 video) and send it again in a supported format.",
+      "sources": [
+        { "title": "Get Post Status: failed example", "url": "https://help.blotato.com/rest-api-reference/publish-post/get-post" },
+        { "title": "Error Reference: API Errors, Invalid File Format", "url": "https://help.blotato.com/support/errors" },
+        { "title": "Media Requirements: Bluesky", "url": "https://help.blotato.com/rest-api-reference/publish-post/media" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "bluesky-media-rejected",
+      "title": "Bluesky media attachment rejected",
+      "wording": ["Bluesky media attachment rejected"],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["bluesky media attachment rejected"] },
+      "stage": "Publishing",
+      "cause": "Bluesky didn't accept the attached media.",
+      "fix": "Attach up to 4 images or 1 video, and make sure every media URL is public and in a supported format.",
+      "sources": [
+        { "title": "Error Reference: Platform-Specific Errors", "url": "https://help.blotato.com/support/errors" },
+        { "title": "Media Requirements: Bluesky", "url": "https://help.blotato.com/rest-api-reference/publish-post/media" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "could-not-upload-to-platform",
+      "title": "Could not upload media to the platform",
+      "wording": ["Could not upload media to [platform]"],
+      "match": { "httpStatus": [], "codes": [], "patterns": [], "regex": ["could not upload media to (?!storage)"] },
+      "stage": "Publishing",
+      "cause": "The social platform rejected the media Blotato tried to upload. It isn't a rate-limit or credits problem, and sending the same media again won't help.",
+      "fix": "Read the exact per-post error in Blotato's Logs, check the media against the platform's requirements, and reconnect the account if the connection may be stale.",
+      "sources": [{ "title": "Error Reference: Platform-Specific Errors", "url": "https://help.blotato.com/support/errors" }],
+      "inDocs": true
+    },
+    {
+      "id": "rate-limit-429",
+      "title": "Too many requests (429)",
+      "wording": ["Rate limit exceeded, retry in N seconds", "The service is receiving too many requests from you"],
+      "match": { "httpStatus": [429], "codes": [], "patterns": ["rate limit exceeded", "too many requests"] },
+      "stage": "Any request to Blotato",
+      "cause": "The request went over Blotato's per-minute limit for that route (for example 30 per minute for creating posts).",
+      "fix": "Stop calling that route, wait for the retry time in the message, then send fewer requests per minute.",
+      "sources": [
+        { "title": "Rate limits", "url": "https://help.blotato.com/api-and-mcp-concepts/rate-limits" },
+        { "title": "Upload Media: Too Many Requests", "url": "https://help.blotato.com/rest-api-reference/publish-post/upload-media-v2-media" },
+        { "title": "Error Reference: API Errors", "url": "https://help.blotato.com/support/errors" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "validation-422",
+      "title": "Validation error (422)",
+      "wording": ["Validation error"],
+      "match": { "httpStatus": [422], "codes": [], "patterns": ["is missing", "validation error", "must be"] },
+      "stage": "Creating the post or uploading media",
+      "cause": "A field in the request is missing or has the wrong shape. The most common cause of failed posts is incorrect JSON structure.",
+      "fix": "Fix the field named in the error using the endpoint's schema, then send it again.",
+      "sources": [
+        { "title": "Errors and retries", "url": "https://help.blotato.com/api-and-mcp-concepts/error-handling" },
+        { "title": "Error Reference: API Errors, Invalid JSON Error", "url": "https://help.blotato.com/support/errors" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "not-found-404",
+      "title": "Not found (404)",
+      "wording": ["Not found"],
+      "match": { "httpStatus": [404], "codes": [], "patterns": [] },
+      "stage": "Checking a post's status",
+      "cause": "Blotato has no record with that ID for this account, often because the wrong kind of ID was used.",
+      "fix": "Re-fetch the record and check the ID type (a postSubmissionId for status checks) and the account.",
+      "sources": [
+        { "title": "Errors and retries", "url": "https://help.blotato.com/api-and-mcp-concepts/error-handling" },
+        { "title": "Get Post Status", "url": "https://help.blotato.com/rest-api-reference/publish-post/get-post" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "server-error-5xx",
+      "title": "Server error or service unavailable (5xx)",
+      "wording": ["503 Service Unavailable", "504 Gateway Timeout"],
+      "match": { "httpStatus": [500, 502, 503, 504], "codes": [], "patterns": ["service unavailable", "gateway timeout"] },
+      "stage": "Any request to Blotato",
+      "cause": "A service failed or timed out. The status alone doesn't show the cause, and after a create request it doesn't prove the post wasn't made.",
+      "fix": "Keep the response and request ID. For reads, retry after a delay a limited number of times. After a create request, check existing posts before sending again.",
+      "sources": [
+        { "title": "Error Reference: API Errors", "url": "https://help.blotato.com/support/errors" },
+        { "title": "Errors and retries", "url": "https://help.blotato.com/api-and-mcp-concepts/error-handling" }
+      ],
+      "inDocs": true
+    },
+    {
+      "id": "scheduled-too-far",
+      "title": "Scheduled time too far in the future",
+      "wording": ["Scheduled time is too far in the future."],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["scheduled time is too far in the future"] },
+      "stage": "Creating a scheduled post",
+      "cause": "The scheduled time is more than 9 months away.",
+      "fix": "Pick a time within the next 9 months.",
+      "sources": [{ "title": "Error Reference: Plan Limit Errors", "url": "https://help.blotato.com/support/errors" }],
+      "inDocs": true
+    },
+    {
+      "id": "scheduled-cap",
+      "title": "Scheduled posts limit reached",
+      "wording": ["You have reached the maximum number of scheduled posts (N) for your plan. Please remove some scheduled posts or upgrade your plan."],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["maximum number of scheduled posts"] },
+      "stage": "Creating a scheduled post",
+      "cause": "The plan's cap on queued scheduled posts was reached.",
+      "fix": "Delete upcoming posts in Posts > Scheduled, or upgrade the plan.",
+      "sources": [{ "title": "Error Reference: Plan Limit Errors", "url": "https://help.blotato.com/support/errors" }],
+      "inDocs": true
+    },
+    {
+      "id": "file-too-large",
+      "title": "File over the plan's upload size",
+      "wording": ["File exceeds the maximum upload size (N MB) for your plan. Upload a smaller file, or upgrade your plan to increase your max upload size."],
+      "match": { "httpStatus": [], "codes": [], "patterns": ["exceeds the maximum upload size"] },
+      "stage": "Uploading media",
+      "cause": "The media file is bigger than the plan's upload cap.",
+      "fix": "Compress or trim the file, or upgrade the plan.",
+      "sources": [{ "title": "Error Reference: Plan Limit Errors", "url": "https://help.blotato.com/support/errors" }],
+      "inDocs": true
+    }
+  ]
+}

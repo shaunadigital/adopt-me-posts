@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { PostRecord, StepState, TraceStep } from '../lib/posts'
 import { shortId } from '../lib/posts'
 import { ExampleTag, StatusPill } from './PostsPanel'
@@ -51,42 +52,14 @@ function Step({ step, last, demoMode }: { step: TraceStep; last: boolean; demoMo
   )
 }
 
-function DoctorPlaceholder({ failed }: { failed: boolean }) {
-  return (
-    <div className="doctor">
-      <div className="doctor__head">
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#5FD1B3"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
-          <path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4" />
-          <circle cx="20" cy="10" r="2" />
-        </svg>
-        <h3 className="doctor__title">Post doctor</h3>
-      </div>
-      <p>
-        {failed
-          ? 'Coming next: the cause in plain words, the fix, and a reply you can send the customer.'
-          : 'When a post fails, the cause, the fix and a reply you can send the customer show up here.'}
-      </p>
-    </div>
-  )
-}
-
 interface Props {
   post: PostRecord | null
   demoMode: boolean
+  /** The post doctor box, pinned to the bottom of the panel. */
+  doctor: ReactNode
 }
 
-export function TracePanel({ post, demoMode }: Props) {
+export function TracePanel({ post, demoMode, doctor }: Props) {
   if (!post) {
     return (
       <section className="panel trace" aria-labelledby="trace-title">
@@ -116,7 +89,7 @@ export function TracePanel({ post, demoMode }: Props) {
               </li>
             ))}
           </ol>
-          <DoctorPlaceholder failed={false} />
+          {doctor}
         </div>
       </section>
     )
@@ -150,7 +123,7 @@ export function TracePanel({ post, demoMode }: Props) {
             ))}
           </ol>
         )}
-        <DoctorPlaceholder failed={post.status === 'failed'} />
+        {doctor}
       </div>
     </section>
   )

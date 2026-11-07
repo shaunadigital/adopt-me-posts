@@ -110,8 +110,8 @@ check(
 
 const longResult = await waitForFinal(tooLong.data?.postSubmissionId)
 check(
-  'Text over 300 characters → failed, mentions the 300 limit',
-  longResult.final?.status === 'failed' && /301 characters.*300/.test(longResult.final.errorMessage),
+  'Text over 300 characters → failed with Blotato error 20005 wording',
+  longResult.final?.status === 'failed' && /character limit of 300 characters for platform bluesky \(error code 20005\)/.test(longResult.final.errorMessage),
   longResult,
 )
 const discResult = await waitForFinal(forcedDisc.data?.postSubmissionId)

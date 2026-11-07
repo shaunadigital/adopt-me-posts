@@ -138,7 +138,7 @@ Documented failure example (guide, error handling):
 
 ## Bluesky limits (media requirements page)
 
-- 300 characters per post. The demo counts graphemes, which is how Bluesky counts.
+- 300 characters per post. The demo counts graphemes, which is how Bluesky counts. Blotato's Error Reference says emoji and full-width characters count as 2 toward error 20005, so Blotato's count can be higher than ours.
 - Up to 4 images (1080x1080 square, 1200x627 landscape, 627x1200 portrait), or one video.
 
 ## Demo-mode failures and where their wording comes from
@@ -148,5 +148,9 @@ Documented failure example (guide, error handling):
 | `invalid-key` | Any route, HTTP 401 | `Invalid API key` | Paraphrased from the guide's 401 "invalid API key"; the exact body text isn't documented |
 | `disconnected-account` | Post status `failed` | `Invalid account credentials` | Guide, Post Failure example |
 | `bad-media-url` | `POST /v2/media` 422 with code 90009, or post status `failed` | `Blotato could not fetch the media URL. Confirm the URL loads or downloads without signing in, then try again.` | Guide, Upload Media error codes |
-| `too-long` | Post status `failed` | `Post text is N characters. Bluesky allows 300 characters per post.` | App wording: Blotato doesn't document this error. The limit comes from the media requirements page. |
+| `too-long` | Post status `failed` | `Text length exceeds the character limit of 300 characters for platform bluesky (error code 20005)` | Error Reference, Plan Limit Errors (https://help.blotato.com/support/errors). The docs don't say whether it comes at create time or as the post's errorMessage, or how the platform name is written. The earlier demo wording ("Post text is N characters...") was invented and is no longer used. |
 | Unknown post ID | Status route 404 | `{ "statusCode": 404, "message": "Not found" }` | Guide example |
+
+## Known errors
+
+`docs/known-errors.json` lists every Blotato error this app can hit, with the documented wording, cause, fix and source page. The post doctor only cites links from that file.

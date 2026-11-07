@@ -4,11 +4,15 @@
 import { DOGS } from '../../shared/dogs'
 import { encodeDemoPostId } from '../../shared/demoPostIds'
 import { countGraphemes } from './text'
-import { formatWhen, nextMonday9am, type PostRecord, type TraceStep } from './posts'
+import { formatWhen, nextMonday9am, type DoctorResult, type PostRecord, type TraceStep } from './posts'
 
 // 312 characters on purpose: the failed example shows the post doctor's most common case.
 const ROCKET_TOO_LONG =
   "Rocket is 1 and lives up to his name. Fetch, zoomies, anyone who will run with him: he's in. He picks up sit and wait fast, has a low-shedding curly coat, and naps hard after a good run. He needs an active home and a fenced yard, and he would love a person who runs or hikes. Message us soon to meet him, please."
+
+// Generated once with the real /api/doctor route (claude-sonnet-5-5) and saved here,
+// so the example never calls Claude on load. Regenerate if known-errors.json changes.
+export const ROCKET_DOCTOR: DoctorResult | undefined = undefined
 
 const dog = (slug: string) => DOGS.find((d) => d.slug === slug)!
 const iso = (t: number) => new Date(t).toISOString()
@@ -57,7 +61,8 @@ export function buildExamples(handle: string, now = Date.now()): PostRecord[] {
   // 1. Failed: text over Bluesky's 300-character limit. Selected on load.
   const rocketAt = now - 42 * 60_000
   const rocketId = encodeDemoPostId(rocketAt, null, `long${countGraphemes(ROCKET_TOO_LONG)}`)
-  const tooLong = `Post text is ${countGraphemes(ROCKET_TOO_LONG)} characters. Bluesky allows 300 characters per post.`
+  // Blotato's documented wording (Error Reference, error code 20005).
+  const tooLong = 'Text length exceeds the character limit of 300 characters for platform bluesky (error code 20005)'
   const rocket: PostRecord = {
     localId: `example-rocket-${rocketId.slice(-8)}`,
     example: true,
@@ -71,6 +76,7 @@ export function buildExamples(handle: string, now = Date.now()): PostRecord[] {
     mediaUrl: media('rocket'),
     failedStep: 'result',
     error: tooLong,
+    doctor: ROCKET_DOCTOR,
     httpStatus: 200,
     rawError: { postSubmissionId: rocketId, status: 'failed', errorMessage: tooLong },
     trace: [
