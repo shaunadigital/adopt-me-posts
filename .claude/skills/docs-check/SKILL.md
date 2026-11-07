@@ -32,7 +32,8 @@ Checks that `docs/known-errors.json` still matches what Blotato's help docs say.
 
 ## Rules for reporting
 
-- Report only real differences you confirmed in the docs this run. When unsure, open the page; if still unsure, leave it out.
+- `differences`: only real differences you confirmed in the docs this run. When unsure, open the page; if still unsure, it is not a difference.
+- `unverified`: everything you checked for but could not confirm either way this run, with the reason. For example: a wording you didn't find in search and whose source page you didn't open (or opened without finding it, but couldn't rule out a rewording), or a code you couldn't locate. List each item once (entry id plus the wording, code or URL). Leave it empty only if every check was confirmed. These are shown on every run but never open an issue, so be honest here rather than guessing.
 - Quote the docs' exact current text in `docs`, and our text in `ours`.
 - Only cite `https://help.blotato.com/...` URLs that the tools returned this run.
 - Never put customer data or API keys in searches (there are none in this task).
@@ -49,4 +50,7 @@ No differences.            ← or, for each difference:
   Ours: "<our text>"
   Docs: "<their current text>"  (<url>)
   Suggested change: <one line>
+
+Unverified:                ← or "Everything was confirmed."
+- <entryId> · "<wording, code or URL>": <why it couldn't be confirmed>
 ```

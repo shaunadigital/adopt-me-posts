@@ -47,15 +47,16 @@ jobs:
 
             Run the docs-check skill in .claude/skills/docs-check/SKILL.md against docs/known-errors.json.
             The source-page status file is /tmp/source-status.json. This is a read-only check: do not edit
-            files or take any action. Return the structured output. Use an empty differences list if
-            everything still matches. Today is ${{ github.run_started_at }}.
+            files or take any action. Return the structured output: confirmed differences in
+            `differences` (empty if everything still matches), and anything you could not confirm either
+            way in `unverified`. Today is ${{ github.run_started_at }}.
           claude_args: |
             --model claude-sonnet-5-5
             --max-turns 20
             --mcp-config '{"mcpServers":{"blotato-docs":{"type":"http","url":"https://help.blotato.com/~gitbook/mcp"}}}'
             --allowedTools "Read,mcp__blotato-docs__searchDocumentation,mcp__blotato-docs__getPage"
             --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash,WebFetch,WebSearch,mcp__blotato-docs__sendFeedback"
-            --json-schema '{"type":"object","properties":{"checkedEntries":{"type":"integer"},"checkedSources":{"type":"integer"},"summary":{"type":"string"},"differences":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"kind":{"type":"string","enum":["source_missing","source_moved","wording_changed","wording_missing","code_changed","explanation_changed"]},"ours":{"type":"string"},"docs":{"type":"string"},"url":{"type":"string"},"suggestion":{"type":"string"}},"required":["entryId","kind","ours","docs","url","suggestion"]}}},"required":["checkedEntries","checkedSources","summary","differences"]}'
+            --json-schema '{"type":"object","properties":{"checkedEntries":{"type":"integer"},"checkedSources":{"type":"integer"},"summary":{"type":"string"},"differences":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"kind":{"type":"string","enum":["source_missing","source_moved","wording_changed","wording_missing","code_changed","explanation_changed"]},"ours":{"type":"string"},"docs":{"type":"string"},"url":{"type":"string"},"suggestion":{"type":"string"}},"required":["entryId","kind","ours","docs","url","suggestion"]}},"unverified":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"item":{"type":"string"},"reason":{"type":"string"}},"required":["entryId","item","reason"]}}},"required":["checkedEntries","checkedSources","summary","differences","unverified"]}'
 
   report:
     needs: check
@@ -74,9 +75,27 @@ jobs:
             echo "::error::The check job returned no report."; exit 1
           fi
           COUNT=$(echo "$REPORT" | jq '.differences | length')
-          echo "$REPORT" | jq '{checkedEntries, checkedSources, summary, differences: (.differences | length)}'
+          UNVERIFIED=$(echo "$REPORT" | jq '(.unverified // []) | length')
+          echo "$REPORT" | jq '{checkedEntries, checkedSources, summary, differences: (.differences | length), unverified: ((.unverified // []) | length)}'
+
+          # Run summary on every run: confirmed differences and anything Claude couldn't confirm.
+          # Unverified items are shown here only; they never open or update an issue.
+          echo "$REPORT" | jq -r --arg date "$(date -u +%Y-%m-%d)" '
+            "## Daily docs check · \($date)\n\n" +
+            "Checked \(.checkedEntries) entries and \(.checkedSources) source pages against Blotato'"'"'s live docs.\n\n" +
+            "| Confirmed differences | Unverified |\n| --- | --- |\n| \(.differences | length) | \((.unverified // []) | length) |\n\n" +
+            (if (.differences | length) > 0
+              then "### Confirmed differences (issue opened or updated)\n\n" +
+                ([.differences[] | "- `\(.entryId)` · \(.kind): ours \"\(.ours)\", docs now \"\(.docs)\" ([page](\(.url)))"] | join("\n")) + "\n\n"
+              else "### Confirmed differences\n\nNone. No issue opened.\n\n" end) +
+            (if ((.unverified // []) | length) > 0
+              then "### Unverified this run (shown here only, no issue)\n\n" +
+                ([.unverified[] | "- `\(.entryId)` · \(.item): \(.reason)"] | join("\n")) + "\n\n"
+              else "### Unverified this run\n\nNone. Every check was confirmed.\n\n" end) +
+            "### Claude'"'"'s summary\n\n\(.summary)\n"' >> "$GITHUB_STEP_SUMMARY"
+
           if [ "$COUNT" -eq 0 ]; then
-            echo "No differences. Nothing to open."; exit 0
+            echo "No confirmed differences ($UNVERIFIED unverified, see the run summary). Nothing to open."; exit 0
           fi
 
           BODY=$(echo "$REPORT" | jq -r --arg run "$RUN_URL" --arg date "$(date -u +%Y-%m-%d)" '
