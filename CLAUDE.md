@@ -11,10 +11,29 @@ Social posting tool for a dog rescue (made-up dogs), with a built-in post doctor
 - Keys live in `.env.local` (gitignored) and in Vercel env vars. Never print, log, or commit key values.
 - `.env.example` lists the variable names with empty values.
 
-## Demo mode
-- When `BLOTATO_API_KEY` is empty, the app runs in demo mode: Blotato calls return fake responses and the home page shows a "Demo mode" label.
-- `api/config.ts` reports `{ demoMode }` to the client. It never returns key values.
+## Blotato
+- `docs/blotato-api-notes.md` holds the endpoints, shapes and error wording, copied from Blotato's OpenAPI spec and guide with source links. Check it (and the live spec) before touching Blotato code. Don't guess field names.
+- `api/_lib/blotato.ts` is the only code that calls Blotato or reads `BLOTATO_API_KEY`. Every request and response is logged as JSON with the key hidden and signed upload URLs redacted.
+- Files in `api/_lib/` are helpers, not routes (Vercel skips `_` folders). Relative imports in `api/` use `.js` extensions (Node ESM).
 
-## Local dev
-- `npm run dev` runs the front end only (Vite). `/api` routes need `vercel dev`.
-- Run `npm run build` before pushing.
+## API routes
+| Route | Blotato call |
+| --- | --- |
+| `GET /api/config` | none: `{ demoMode }` |
+| `GET /api/accounts?platform=` | `GET /v2/users/me/accounts` |
+| `POST /api/media/upload?filename=x.jpg` (raw bytes) | `POST /v2/media/uploads`, then PUT to `presignedUrl`; returns `{ publicUrl }` |
+| `POST /api/media/from-url` `{ url }` | `POST /v2/media` |
+| `POST /api/posts` `{ accountId, text, mediaUrls?, scheduledTime?, additionalPosts? }` | `POST /v2/posts` (Bluesky target) |
+| `GET /api/posts/:id` | `GET /v2/posts/{postSubmissionId}` |
+
+Routes pass Blotato's status and body straight through, so the frontend sees real error shapes.
+
+## Demo mode
+- When `BLOTATO_API_KEY` is empty, the app runs in demo mode: `api/_lib/demo.ts` answers instead of Blotato, and the home page shows a "Demo mode" label.
+- Demo account: Bluesky `adoptmeposts.bsky.social` (id `demo-bluesky-1`). Posts are `in-progress` for 4 seconds, then `published` or `failed`. Scheduled posts stay `scheduled` until their time. Post state is stateless, encoded in the ID.
+- Force a failure with `?demoFail=` or an `x-demo-fail` header: `invalid-key`, `disconnected-account`, `bad-media-url`, `too-long`. Text over 300 graphemes, unknown account IDs and unfetchable media URLs also fail on their own. This is ignored when a real key is set.
+
+## Local dev and tests
+- `npm run dev` runs the front end only (Vite). `/api` routes need `vercel dev --listen 3000`.
+- `npm run test:demo` calls every route in demo mode (default `http://localhost:3000`; set `BASE_URL` to test a deploy).
+- Run `npm run build` before pushing. It typechecks `api/` too (`tsconfig.api.json`).
