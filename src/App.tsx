@@ -541,6 +541,15 @@ function App() {
     setTicket({ text: ex.text(exampleIds(posts)), exampleKey: ex.key, status: 'idle' })
   }
 
+  /** Show a saved example lookup with this browser's copy of the example post (ID and scheduled time). */
+  function localizeLookup(l: TicketLookup, id: string | undefined): TicketLookup {
+    const local = id ? posts.find((p) => p.postSubmissionId === id) : undefined
+    if (!local) return { ...l, savedHere: false }
+    const raw = l.raw && typeof l.raw === 'object' ? { ...(l.raw as Record<string, unknown>), postSubmissionId: id } : l.raw
+    if (raw && typeof raw === 'object' && local.scheduledTime) (raw as Record<string, unknown>).scheduledTime = local.scheduledTime
+    return { ...l, postSubmissionId: id!, savedHere: true, raw }
+  }
+
   async function runTicket() {
     const text = ticket.text.trim()
     if (!text) return
@@ -555,7 +564,7 @@ function App() {
         status: 'done',
         doctor: { ...saved.doctor },
         // Point "Show this post" at this browser's copy of the example post.
-        lookup: saved.lookup ? { ...saved.lookup, postSubmissionId: id || saved.lookup.postSubmissionId, savedHere: !!id } : null,
+        lookup: saved.lookup ? localizeLookup(saved.lookup, id) : null,
       }))
       return
     }
