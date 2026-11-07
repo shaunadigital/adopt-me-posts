@@ -30,7 +30,11 @@ export interface TicketExample {
   label: string
   /** Built from the post IDs of this browser's example posts, so "Show this post" works. */
   text: (ids: { rocket?: string; pip?: string }) => string
-  /** Generated once with the live /api/doctor route and saved here: examples never call Claude. */
+  /**
+   * Generated once with the live /api/doctor route and saved here: examples never call Claude.
+   * One hand edit: the scheduled example's cause had a UTC time that only matched Hawaii, and the
+   * example post is always next Monday 9:00 AM in the viewer's own time zone.
+   */
   saved: TicketResult | null
 }
 
@@ -144,7 +148,7 @@ export const TICKET_EXAMPLES: TicketExample[] = [
             "inDocs": true
           }
         ],
-        "cause": "The post isn't stuck. Blotato shows its status as scheduled, with a scheduled time of 2026-11-09 19:00 UTC (the trace says Mon 9:00 AM), and a scheduled post waits until that time before going out.",
+        "cause": "The post isn't stuck. Blotato shows its status as scheduled, for Monday at 9:00 AM, and a scheduled post waits until that time before going out.",
         "fix": "Check the scheduled time in the customer's own time zone and look at the post again after that time. If the schedule disappears at its due time, check the Published and Failed results before assuming either outcome.",
         "reply": "Hi Jordan, thanks for checking. Pip's post isn't stuck. It was set up correctly and is scheduled to go out on Monday at 9:00 AM, and it will wait until then rather than posting early. Nothing has gone wrong so far. If it isn't up shortly after that time, send us a message with the post ID and we'll look at what happened. The Adopt Me Posts team",
         "sources": [
