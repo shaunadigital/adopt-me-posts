@@ -821,6 +821,9 @@ a:hover {
   margin-left: auto;
   font-size: 13px;
   color: var(--mint-soft);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 .doctor a {
   color: var(--mint-soft);
@@ -948,6 +951,10 @@ a:hover {
   font-size: 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.doctor__sources a {
+  display: inline-block;
+  padding: 6px 0;
 }
 .doctor__sources,
 .doctor__checks {

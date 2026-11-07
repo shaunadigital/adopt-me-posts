@@ -6,6 +6,8 @@ export interface TrimState {
   status: 'idle' | 'writing' | 'ready' | 'error'
   text: string
   error?: string
+  ms?: number // how long Claude took, for the new post's trace
+  http?: number
 }
 
 interface Props {

@@ -59,7 +59,7 @@ async function fetchPhoto(dog: Dog): Promise<Blob> {
 
 /** Where the current caption came from, for the trace's first step. */
 interface CaptionSource {
-  kind: 'starter' | 'claude' | 'edited'
+  kind: 'starter' | 'claude' | 'edited' | 'trimmed'
   ms?: number
   http?: number
   at: string
@@ -326,11 +326,22 @@ function App() {
       key: 'caption',
       label: 'Caption written',
       state: 'ok',
-      meta: source.kind === 'claude' ? `Claude · ${formatMs(source.ms ?? 0)}` : source.kind === 'edited' ? 'edited' : 'starter',
+      meta:
+        source.kind === 'claude' || source.kind === 'trimmed'
+          ? `Claude · ${formatMs(source.ms ?? 0)}`
+          : source.kind === 'edited'
+            ? 'edited'
+            : 'starter',
       http: source.http,
       ms: source.ms,
       note: `${countGraphemes(text)} characters for Bluesky${
-        source.kind === 'starter' ? ', hand-written starter' : source.kind === 'edited' ? ', edited by hand' : ''
+        source.kind === 'starter'
+          ? ', hand-written starter'
+          : source.kind === 'edited'
+            ? ', edited by hand'
+            : source.kind === 'trimmed'
+              ? ', shortened by the post doctor'
+              : ''
       }`,
       at: source.at,
     }
@@ -512,7 +523,7 @@ function App() {
     setTrim({ status: 'writing', text: '' })
     try {
       const res = await writeCaption(current.dogSlug, undefined, current.caption)
-      setTrim({ status: 'ready', text: res.data.caption })
+      setTrim({ status: 'ready', text: res.data.caption, ms: res.ms, http: res.status })
     } catch (err) {
       setTrim({ status: 'error', text: '', error: `Couldn't shorten the caption: ${describeError(err).text}` })
     }
@@ -522,8 +533,9 @@ function App() {
     const d = current && DOGS.find((x) => x.slug === current.dogSlug)
     if (!d || trim.status !== 'ready') return
     const text = trim.text.trim()
+    const source: CaptionSource = { kind: 'trimmed', ms: trim.ms, http: trim.http, at: new Date().toISOString() }
     setTrim({ status: 'idle', text: '' })
-    await post(undefined, { dog: d, text, source: { kind: 'claude', at: new Date().toISOString() } })
+    await post(undefined, { dog: d, text, source })
   }
 
   const handle = account?.username.replace(/^@/, '') ?? null
