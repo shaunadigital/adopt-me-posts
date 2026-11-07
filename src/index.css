@@ -633,28 +633,168 @@ a:hover {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px dashed var(--border);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.step__dot--ok {
+  background: #dcefe9;
+  color: var(--teal);
+}
+.step__dot--failed {
+  background: var(--fail-text);
+  color: #fff;
+}
+.step__dot--waiting {
+  border: 2px solid var(--teal);
+  border-right-color: transparent;
+  animation: spin 1s linear infinite;
+}
+.step__dot--scheduled {
+  background: #e3e9f6;
+  border: 2px solid #23417a;
+}
+.step__dot--skipped {
+  border: 2px dashed var(--border);
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .step__dot--waiting {
+    animation: none;
+    border-right-color: var(--teal);
+    border-style: dotted;
+  }
 }
 .step__line {
   width: 2px;
   flex-grow: 1;
   min-height: 20px;
-  background: var(--divider);
+  background: var(--border);
 }
 .step__text {
   padding-bottom: 16px;
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
   min-width: 0;
+}
+.step__top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
 }
 .step__label {
   font-weight: 600;
+  color: var(--ink);
+}
+.step__meta {
+  margin-left: auto;
+  font-size: 12px;
   color: var(--muted);
+  white-space: nowrap;
 }
 .step__note {
   font-size: 13px;
   color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.step--skipped .step__label {
+  color: var(--muted);
+}
+.step--failed .step__label,
+.step--failed .step__note {
+  color: var(--fail-text);
+}
+.trace__id {
+  font-size: 12px;
+  color: var(--muted);
+}
+.trace__pill {
+  margin-left: auto;
+}
+
+/* ---- Selection, tags, links ---- */
+.posts-table tbody tr {
+  cursor: pointer;
+}
+.posts-table tbody tr:hover td {
+  background: var(--soft);
+}
+.posts-table tr.row--failed:hover td {
+  background: #fbefe8;
+}
+.posts-table tr.row--selected td,
+.posts-table tr.row--selected:hover td {
+  background: #e7f2ee;
+}
+.posts-table tr.row--selected td:first-child {
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+.row-select {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  min-height: 24px;
+}
+.row-select:hover {
+  text-decoration: underline;
+}
+.cell-dog .row-select {
+  padding-left: 10px;
+}
+.tag-example {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  padding: 0 5px;
+  vertical-align: 1px;
+}
+.panel__foot {
+  margin-top: auto;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--divider);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+.link-button {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  min-height: 44px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--teal);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.link-button:hover {
+  color: var(--teal-hover);
 }
 .doctor {
   margin-top: auto;
@@ -714,6 +854,73 @@ a:hover {
   }
   .panel__head .actions {
     margin-left: 0;
+  }
+  /* Posts table becomes stacked rows: dog + status on top, ID/error and time below. */
+  .table-wrap {
+    overflow-x: visible;
+    padding: 0 12px 8px;
+  }
+  .posts-table {
+    min-width: 0;
+  }
+  .posts-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .posts-table tbody,
+  .posts-table tr {
+    display: block;
+  }
+  .posts-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'dog status'
+      'post post'
+      'when when';
+    gap: 2px 8px;
+    padding: 12px 8px 12px 0;
+    border-bottom: 1px solid #eef0ec;
+  }
+  .posts-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent !important;
+  }
+  .posts-table tr.row--failed {
+    background: #fdf6f2;
+  }
+  .posts-table tr.row--selected {
+    background: #e7f2ee;
+    box-shadow: inset 4px 0 0 var(--teal);
+  }
+  .posts-table tr.row--selected td:first-child {
+    box-shadow: none;
+  }
+  .cell-dog {
+    grid-area: dog;
+  }
+  .cell-status {
+    grid-area: status;
+    text-align: right;
+  }
+  .cell-post {
+    grid-area: post;
+    min-width: 0;
+    padding-left: 10px !important;
+  }
+  .cell-when {
+    grid-area: when;
+    padding-left: 10px !important;
+    white-space: normal;
+  }
+  .cell-sub {
+    display: inline;
+    margin-left: 6px;
   }
   /* Two compact dog cards per row so the composer isn't a full screen away. */
   .dog-grid {

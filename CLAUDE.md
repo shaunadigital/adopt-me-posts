@@ -36,7 +36,12 @@ Routes pass Blotato's status and body straight through, so the frontend sees rea
 - `shared/` lives outside `api/` because `vercel dev` routes every `/api/*` URL to functions, so the browser can't load source files from there.
 - Posting (`App.tsx` `post()`): fetch the dog's photo from `/dogs/<slug>.jpg`, then `POST /api/media/upload`, then `POST /api/posts` with the caption and `[publicUrl]`. The button is disabled while sending, when the caption is empty or over 300, or when no account is loaded.
 - Send menu: Now, Monday 9:00 AM (the next Monday, local time), or Pick a time (`datetime-local`, the viewer's zone). Scheduled times go to Blotato as ISO 8601 UTC (`toISOString()`), e.g. `2026-11-13T01:30:00.000Z`.
-- "All posts" is stored in localStorage (`adopt-me-posts:posts:v1`, newest first, max 100); see `src/lib/posts.ts`. Rows show the starting status (In progress or Scheduled). A failed upload or create step shows as Failed with the error on the row. Status polling, the trace and the post doctor come in later steps.
+- "All posts" is stored in localStorage (`adopt-me-posts:posts:v1`, newest first, max 100); see `src/lib/posts.ts`. Each record carries its `trace` (caption, upload, create, result steps with state, HTTP code, timing and note) plus `rawError` for the post doctor.
+- Status updates (`App.tsx`): every 3 s, poll `GET /api/posts/:id` for In progress posts (every 15 s after 20 checks), and stop at Published or Failed. Scheduled posts flip to In progress at their time. A 4xx other than 429 on a status check marks the post Failed; network errors, 429 and 5xx keep retrying.
+- Post trace panel (`TracePanel.tsx`): the step timeline for the selected row, with the failing step marked. Clicking a row (or its dog-name button) selects it; on phones the page scrolls to the trace. The post doctor is still a placeholder (step 6).
+- Example posts (`src/lib/examples.ts`): in demo mode only, when the browser has no saved posts, four examples are seeded: Published (Tank), Scheduled (Pip, next Monday 9 AM), In progress (Biscuit, publishes about 4 s after load) and Failed (Rocket, 312 characters). Rocket is selected. "Reset examples" replaces them and keeps the user's own posts. With a real key, examples are never seeded and any saved ones are dropped. Examples only seed after `/api/config` answers.
+- Demo post IDs are encoded in `shared/demoPostIds.ts`, which the fake Blotato and the examples both use.
+- On phones the posts table stacks into rows (dog + status, then ID and error, then time), so Status shows without sideways scrolling.
 - To test a failure in the UI, open the app with `?demoFail=invalid-key` (or another demo failure); the posting requests forward it as `x-demo-fail`.
 
 ## Demo mode

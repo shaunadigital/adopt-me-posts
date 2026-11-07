@@ -2,6 +2,23 @@
 
 export type PostStatus = 'in-progress' | 'scheduled' | 'published' | 'failed'
 
+/** One step of a post's trace: caption, photo upload, post created, final result from Blotato. */
+export type StepKey = 'caption' | 'upload' | 'create' | 'result'
+export type StepState = 'ok' | 'failed' | 'waiting' | 'scheduled' | 'skipped'
+
+export interface TraceStep {
+  key: StepKey
+  label: string
+  state: StepState
+  /** Mono line on the right: "201 · 188 ms", "Claude · 1.4 s", "failed · 4 s later". */
+  meta?: string
+  note: string
+  http?: number
+  ms?: number
+  at?: string // ISO, when the step finished
+  link?: string // e.g. the published post's URL
+}
+
 export interface PostRecord {
   localId: string
   dogSlug: string
@@ -12,9 +29,17 @@ export interface PostRecord {
   postSubmissionId?: string // Blotato's ID, once the create step succeeds
   scheduledTime?: string // ISO UTC, as sent to and echoed by Blotato
   mediaUrl?: string
-  failedStep?: 'upload' | 'create'
+  publicUrl?: string // the live Bluesky post, once published
+  failedStep?: StepKey
   error?: string // plain-words error, shown on the row
   httpStatus?: number
+  /** The raw body of the response that failed, kept for the post doctor (step 6). */
+  rawError?: unknown
+  trace: TraceStep[]
+  example?: boolean // demo-mode example post
+  /** When the post was handed to Blotato's queue (create step done, or its scheduled time). */
+  queuedAt?: string
+  checks?: number // status checks so far
 }
 
 const KEY = 'adopt-me-posts:posts:v1'
@@ -24,11 +49,43 @@ export function loadPosts(): PostRecord[] {
   try {
     const raw = window.localStorage.getItem(KEY)
     const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? (parsed as PostRecord[]) : []
+    // Posts saved before traces existed get an empty trace.
+    return Array.isArray(parsed) ? (parsed as PostRecord[]).map((p) => ({ ...p, trace: p.trace ?? [] })) : []
   } catch {
     return []
   }
 }
+
+// ---- Trace helpers ----
+
+export function formatMs(ms: number): string {
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`
+}
+
+export function formatLater(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000))
+  if (s < 60) return `${s} s later`
+  const m = Math.round(s / 60)
+  if (m < 60) return `${m} min later`
+  return `${Math.round(m / 60)} h later`
+}
+
+/** Replace one step (by key) in a post's trace, keeping step order. */
+export function setStep(trace: TraceStep[], step: TraceStep): TraceStep[] {
+  const i = trace.findIndex((s) => s.key === step.key)
+  if (i === -1) return [...trace, step]
+  const next = trace.slice()
+  next[i] = step
+  return next
+}
+
+export const RESULT_LABEL = {
+  waiting: 'Waiting for Bluesky',
+  scheduled: 'Scheduled',
+  published: 'Live on Bluesky',
+  failed: 'Publishing failed',
+  checkFailed: 'Status check failed',
+} as const
 
 export function savePosts(posts: PostRecord[]) {
   try {

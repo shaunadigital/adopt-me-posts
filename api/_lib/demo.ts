@@ -6,6 +6,7 @@
 // can then work out the current status from the ID and the clock.
 
 import { randomUUID } from 'node:crypto'
+import { DEMO_ID_RE, encodeDemoPostId, type DemoOutcome } from '../../shared/demoPostIds.js'
 import type {
   BlotatoAccount,
   BlotatoErrorBody,
@@ -65,14 +66,10 @@ function extOf(filename: string): string | null {
   return m ? m[1].toLowerCase() : null
 }
 
-// ---- Post ID encoding ----
-// demo-<created base36>-<scheduled base36 or 0>-<outcome>-<random>
-// outcome: ok | dis | media | long<N>
-const ID_RE = /^demo-([0-9a-z]+)-([0-9a-z]+)-(ok|dis|media|long\d+)-([0-9a-f]{8})$/
-
-function encodeId(created: number, scheduled: number | null, outcome: string): string {
-  return `demo-${created.toString(36)}-${scheduled ? scheduled.toString(36) : '0'}-${outcome}-${randomUUID().slice(0, 8)}`
-}
+// ---- Post ID encoding: see shared/demoPostIds.ts ----
+const ID_RE = DEMO_ID_RE
+const encodeId = (created: number, scheduled: number | null, outcome: string) =>
+  encodeDemoPostId(created, scheduled, outcome as DemoOutcome)
 
 // ---- Handlers ----
 

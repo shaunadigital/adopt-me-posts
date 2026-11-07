@@ -27,11 +27,21 @@ export interface CreatePostResult {
 export class ApiError extends Error {
   status: number
   body: unknown
-  constructor(message: string, status: number, body: unknown) {
+  ms: number
+  constructor(message: string, status: number, body: unknown, ms = 0) {
     super(message)
     this.status = status
     this.body = body
+    this.ms = ms
   }
+}
+
+export interface PostStatusResult {
+  postSubmissionId: string
+  status: 'in-progress' | 'failed' | 'published' | 'scheduled'
+  scheduledTime?: string
+  publicUrl?: string
+  errorMessage?: string
 }
 
 /**
@@ -47,12 +57,20 @@ function demoFailHeader(): Record<string, string> {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** A successful response with its HTTP status and how long it took, for the post trace. */
+export interface Timed<T> {
+  data: T
+  status: number
+  ms: number
+}
+
+async function requestFull<T>(path: string, init?: RequestInit): Promise<Timed<T>> {
+  const started = performance.now()
   let res: Response
   try {
     res = await fetch(path, init)
   } catch {
-    throw new ApiError('Could not reach the server. Check your connection and try again.', 0, null)
+    throw new ApiError('Could not reach the server. Check your connection and try again.', 0, null, ms(started))
   }
   let data: unknown = null
   try {
@@ -62,9 +80,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const message = (data as { message?: string } | null)?.message ?? `Request failed (${res.status})`
-    throw new ApiError(message, res.status, data)
+    throw new ApiError(message, res.status, data, ms(started))
   }
-  return data as T
+  return { data: data as T, status: res.status, ms: ms(started) }
+}
+
+const ms = (started: number) => Math.round(performance.now() - started)
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await requestFull<T>(path, init)).data
 }
 
 export const getConfig = () => request<AppConfig>('/api/config')
@@ -72,7 +96,7 @@ export const getConfig = () => request<AppConfig>('/api/config')
 export const getAccounts = () => request<{ items: Account[] }>('/api/accounts?platform=bluesky')
 
 export const writeCaption = (dogSlug: string, previous?: string) =>
-  request<CaptionResult>('/api/caption', {
+  requestFull<CaptionResult>('/api/caption', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ dogSlug, previous }),
@@ -80,15 +104,19 @@ export const writeCaption = (dogSlug: string, previous?: string) =>
 
 /** Uploads a file's bytes through POST /api/media/upload. Returns Blotato's public media URL. */
 export const uploadMedia = (filename: string, file: Blob) =>
-  request<{ publicUrl: string }>(`/api/media/upload?filename=${encodeURIComponent(filename)}`, {
+  requestFull<{ publicUrl: string }>(`/api/media/upload?filename=${encodeURIComponent(filename)}`, {
     method: 'POST',
     headers: { 'Content-Type': file.type || 'application/octet-stream', ...demoFailHeader() },
     body: file,
   })
 
 export const createPost = (input: { accountId: string; text: string; mediaUrls: string[]; scheduledTime?: string }) =>
-  request<CreatePostResult>('/api/posts', {
+  requestFull<CreatePostResult>('/api/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...demoFailHeader() },
     body: JSON.stringify(input),
   })
+
+/** GET /api/posts/:id. No demoFail header: forced failures are decided when the post is created. */
+export const getPostStatus = (postSubmissionId: string) =>
+  requestFull<PostStatusResult>(`/api/posts/${encodeURIComponent(postSubmissionId)}`, { cache: 'no-store' })
