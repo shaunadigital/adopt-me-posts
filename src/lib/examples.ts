@@ -12,7 +12,33 @@ const ROCKET_TOO_LONG =
 
 // Generated once with the real /api/doctor route (claude-sonnet-5-5) and saved here,
 // so the example never calls Claude on load. Regenerate if known-errors.json changes.
-export const ROCKET_DOCTOR: DoctorResult | undefined = undefined
+export const ROCKET_DOCTOR: DoctorResult = {
+  "matched": true,
+  "entries": [
+    {
+      "id": "text-too-long-20005",
+      "title": "Text over the platform's character limit (error code 20005)",
+      "inDocs": true,
+      "docsNote": "The docs don't say whether this comes back when the post is created or later as the post's errorMessage, or how the platform name is written. Our demo returns it as the failed post's errorMessage with the platform written as 'bluesky'."
+    }
+  ],
+  "cause": "Rocket's caption is 312 characters, and Bluesky allows 300 characters per post. Blotato accepted the post, but Bluesky rejected it at publishing because the text was too long (error code 20005).",
+  "fix": "Shorten the caption by at least 12 characters, then send it again. The photo uploaded fine, so only the text needs to change.",
+  "reply": "Hi there! Rocket's post didn't go out on Bluesky because the text was a little too long for that site, which has a 300 character limit. Nothing is wrong with his photo. We'll need a slightly shorter version of his write-up, and once it's trimmed it can be sent again. Rocket sounds like a wonderful boy, and we want everyone to see him. The Adopt Me Posts team",
+  "sources": [
+    {
+      "title": "Error Reference: Plan Limit Errors",
+      "url": "https://help.blotato.com/support/errors"
+    },
+    {
+      "title": "Media Requirements: Bluesky (300 characters per post)",
+      "url": "https://help.blotato.com/rest-api-reference/publish-post/media"
+    }
+  ],
+  "checks": [],
+  "model": "claude-sonnet-5-5",
+  "generatedAt": "2026-11-07T21:27:41.323Z"
+}
 
 const dog = (slug: string) => DOGS.find((d) => d.slug === slug)!
 const iso = (t: number) => new Date(t).toISOString()
