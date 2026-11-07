@@ -466,8 +466,67 @@ a:hover {
   gap: 10px;
   align-items: center;
 }
-.composer__foot .btn--primary {
+.send {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  min-width: 0;
+}
+.send__label {
+  font-weight: 500;
+}
+.send__pick {
+  display: inline-flex;
+}
+.send__pick input[aria-invalid='true'] {
+  border-color: var(--fail-text);
+}
+.send__note {
+  font-size: 13px;
+}
+.send__button {
   margin-left: auto;
+}
+.send__status {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 1.5em;
+  text-align: right;
+}
+.send__status:empty {
+  display: none;
+}
+.send__status--blocked {
+  color: var(--muted);
+}
+
+/* ---- Status pills: always text plus color ---- */
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.pill--published {
+  background: #dcefe9;
+  color: #0b5d52;
+}
+.pill--scheduled {
+  background: #e3e9f6;
+  color: #23417a;
+}
+.pill--in-progress {
+  background: #eceeea;
+  color: #3a403d;
+}
+.pill--failed {
+  background: var(--fail-bg);
+  color: var(--fail-text);
 }
 
 /* ---- Posts table ---- */
@@ -490,6 +549,47 @@ a:hover {
 }
 .posts-table th:last-child {
   text-align: right;
+}
+.posts-table td {
+  padding: 12px 12px 12px 0;
+  border-bottom: 1px solid #eef0ec;
+  vertical-align: top;
+}
+.posts-table td:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+.posts-table tr.row--failed td {
+  background: #fdf6f2;
+}
+.cell-dog {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cell-post {
+  min-width: 200px;
+}
+.post-id {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.row-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--fail-text);
+}
+.cell-when {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.cell-sub {
+  display: block;
+  font-size: 12px;
+}
+.table-wrap:focus-visible {
+  outline-offset: -3px;
 }
 .empty {
   padding: 28px 12px;
@@ -599,9 +699,18 @@ a:hover {
     border-left: 0;
     border-top: 1px solid var(--divider);
   }
-  .composer__foot .btn--primary {
+  .send,
+  .send__pick,
+  .send__pick input,
+  #when {
+    width: 100%;
+  }
+  .send__button {
     margin-left: 0;
     width: 100%;
+  }
+  .send__status {
+    text-align: left;
   }
   .panel__head .actions {
     margin-left: 0;

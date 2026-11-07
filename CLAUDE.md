@@ -34,7 +34,10 @@ Routes pass Blotato's status and body straight through, so the frontend sees rea
 - Dogs: `shared/dogs.ts` (used by the client and `api/caption.ts`; keep it free of Node and browser APIs). Each dog has a hand-written `starterCaption` (under 300 characters, no emoji) that shows on load. Photos are in `public/dogs/`, with credits in `CREDITS.md`.
 - Header wordmark per DESIGN.md: "adopt me" (Schibsted 800) + "/posts" (Plex Mono 500, mint), as text with aria-label "Adopt Me Posts".
 - `shared/` lives outside `api/` because `vercel dev` routes every `/api/*` URL to functions, so the browser can't load source files from there.
-- The "All posts" and "Post trace" panels are empty states until posting is wired up. The "Post {dog}" button is disabled for now.
+- Posting (`App.tsx` `post()`): fetch the dog's photo from `/dogs/<slug>.jpg`, then `POST /api/media/upload`, then `POST /api/posts` with the caption and `[publicUrl]`. The button is disabled while sending, when the caption is empty or over 300, or when no account is loaded.
+- Send menu: Now, Monday 9:00 AM (the next Monday, local time), or Pick a time (`datetime-local`, the viewer's zone). Scheduled times go to Blotato as ISO 8601 UTC (`toISOString()`), e.g. `2026-11-13T01:30:00.000Z`.
+- "All posts" is stored in localStorage (`adopt-me-posts:posts:v1`, newest first, max 100); see `src/lib/posts.ts`. Rows show the starting status (In progress or Scheduled). A failed upload or create step shows as Failed with the error on the row. Status polling, the trace and the post doctor come in later steps.
+- To test a failure in the UI, open the app with `?demoFail=invalid-key` (or another demo failure); the posting requests forward it as `x-demo-fail`.
 
 ## Demo mode
 - When `BLOTATO_API_KEY` is empty, the app runs in demo mode: `api/_lib/demo.ts` answers instead of Blotato, and the home page shows a "Demo mode" label.
