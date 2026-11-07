@@ -9,7 +9,11 @@ export function Header({ demoMode, handle }: Props) {
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <h1 className="wordmark">Adopt Me Posts</h1>
+        {/* Wordmark per DESIGN.md: text, not an image. Screen readers hear "Adopt Me Posts". */}
+        <h1 className="wordmark" aria-label="Adopt Me Posts">
+          <span className="wordmark__name" aria-hidden="true">adopt me</span>
+          <span className="wordmark__path" aria-hidden="true">/posts</span>
+        </h1>
         <span className="site-header__org">for {RESCUE_NAME}</span>
         <div className="site-header__right">
           {demoMode && (

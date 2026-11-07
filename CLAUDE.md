@@ -28,11 +28,12 @@ Social posting tool for a dog rescue (made-up dogs), with a built-in post doctor
 
 Routes pass Blotato's status and body straight through, so the frontend sees real error shapes.
 
-| `POST /api/caption` `{ dogSlug, previous? }` | none: Claude (`claude-sonnet-5-5`, effort low, `fallbacks: "default"`) writes a Bluesky caption under 300 characters, with no emoji and at most one hashtag. Returns `{ caption, characters, model, ms }`. Needs `ANTHROPIC_API_KEY`, which is set in Vercel Production only, so this route returns 503 under `vercel dev`. There's a light per-IP limit of 12/min. |
+| `POST /api/caption` `{ dogSlug, previous? }` | none: Claude (`claude-sonnet-5-5`, effort low, `fallbacks: "default"`) writes a Bluesky caption under 300 characters, with no emoji and at most one hashtag. Returns `{ caption, characters, model, ms }`. Needs `ANTHROPIC_API_KEY`, which is set in Vercel Production only, so this route returns 503 under `vercel dev`. It's only called by "Rewrite with Claude", never on page load. There's a light per-IP limit of 12/min, kept in memory, so it is per instance and not shared across instances. |
 
 ## Main screen
 - The design spec is `~/Desktop/claudecode/jobs/blotato/design/DESIGN.md`, with `main-screen-reference.html` as the mockup. Tokens are CSS variables in `src/index.css`; components are in `src/components/`.
-- Dogs: `shared/dogs.ts` (used by the client and `api/caption.ts`; keep it free of Node and browser APIs). Photos are in `public/dogs/`, with credits in `CREDITS.md`.
+- Dogs: `shared/dogs.ts` (used by the client and `api/caption.ts`; keep it free of Node and browser APIs). Each dog has a hand-written `starterCaption` (under 300 characters, no emoji) that shows on load. Photos are in `public/dogs/`, with credits in `CREDITS.md`.
+- Header wordmark per DESIGN.md: "adopt me" (Schibsted 800) + "/posts" (Plex Mono 500, mint), as text with aria-label "Adopt Me Posts".
 - `shared/` lives outside `api/` because `vercel dev` routes every `/api/*` URL to functions, so the browser can't load source files from there.
 - The "All posts" and "Post trace" panels are empty states until posting is wired up. The "Post {dog}" button is disabled for now.
 

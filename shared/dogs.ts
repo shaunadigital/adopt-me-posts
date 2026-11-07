@@ -14,6 +14,7 @@ export interface Dog {
   breed: string
   size: string
   facts: string[] // what the caption can draw on
+  starterCaption: string // hand-written, shown on load; under 300 characters, no emoji
 }
 
 export const RESCUE_NAME = 'Odd Socks Dog Rescue'
@@ -38,6 +39,8 @@ export const DOGS: Dog[] = [
       'snores softly, which her foster calls "white noise"',
       'short walks only; she prefers the couch to the trail',
     ],
+    starterCaption:
+      "Mochi is 3, shaped like a loaf of bread, and sure every lap was built for her. She's house trained, good with cats, and will follow you from room to room. Her foster calls her soft snoring white noise. Could your couch use a Mochi? Message us to meet her.",
   },
   {
     id: 'OSR-0398',
@@ -58,6 +61,8 @@ export const DOGS: Dog[] = [
       'carries a toy around like it is his job',
       'came in when his owner moved into care',
     ],
+    starterCaption:
+      "Biscuit is 7 and has mastered the slow afternoon. He walks nicely on a leash, knows sit, down and paw, and carries a toy around like it's his job. He's good with kids, dogs and visitors, and ready for his next person. Message us to meet him.",
   },
   {
     id: 'OSR-0421',
@@ -78,6 +83,8 @@ export const DOGS: Dog[] = [
       'low-shedding curly coat',
       'crashes hard after a good run',
     ],
+    starterCaption:
+      "Rocket is 1 and lives up to his name. Fetch, zoomies, anyone who will run with him: he's in. He picks up sit and wait fast, has a low-shedding curly coat, and naps hard after a good run. Best with an active home and a fenced yard. Message us to meet him.",
   },
   {
     id: 'OSR-0377',
@@ -98,6 +105,8 @@ export const DOGS: Dog[] = [
       'house trained and quiet indoors',
       'her foster says she is worth every bit of the wait',
     ],
+    starterCaption:
+      "Pepper is 5 and shy at first. Give her a few quiet days and she'll lean her whole weight against your legs. She's house trained, quiet indoors, and best in a calm home without small kids. Her foster says she's worth every bit of the wait. Message us to meet her.",
   },
   {
     id: 'OSR-0430',
@@ -118,6 +127,8 @@ export const DOGS: Dog[] = [
       'better with adults and older kids',
       'will sit politely for a treat',
     ],
+    starterCaption:
+      "Pip is 2, weighs 6 pounds, and has an opinion for each one. He's brave on walks, loves burrowing into warm blankets, and sits politely for a treat. Great for apartment life with adults or older kids. Message us to meet him.",
   },
   {
     id: 'OSR-0352',
@@ -138,6 +149,8 @@ export const DOGS: Dog[] = [
       'claims the biggest bed in any room',
       'senior dog, adoption fee waived',
     ],
+    starterCaption:
+      "Tank is 9, about 140 pounds, and still thinks he's a lap dog. He's calm indoors, slow on walks, and polite with guests and other dogs. He needs a home with few stairs for his older joints. Senior dog, adoption fee waived. Message us to meet him.",
   },
 ]
 

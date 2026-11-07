@@ -86,11 +86,24 @@ a:hover {
   align-items: center;
   gap: 8px 14px;
 }
+/* Wordmark (DESIGN.md, chosen 2026-11-07): "adopt me" + "/posts", no space between. */
 .wordmark {
   margin: 0;
+  font-size: 19px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.wordmark__name {
+  font-family: var(--font-ui);
   font-weight: 800;
-  font-size: 18px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+}
+.wordmark__path {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.85em;
+  color: var(--mint);
 }
 .site-header__org {
   font-family: var(--font-mono);

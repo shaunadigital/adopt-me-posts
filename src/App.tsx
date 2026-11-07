@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DOGS } from '../shared/dogs'
 import { Composer } from './components/Composer'
 import { DogPicker } from './components/DogPicker'
@@ -12,10 +12,12 @@ function App() {
   const [demoMode, setDemoMode] = useState(true)
   const [handle, setHandle] = useState<string | null>(null)
   const [selected, setSelected] = useState(DOGS[0].slug)
-  const [captions, setCaptions] = useState<Record<string, string>>({})
+  // Every dog starts with its hand-written caption. Claude is only called on "Rewrite with Claude".
+  const [captions, setCaptions] = useState<Record<string, string>>(() =>
+    Object.fromEntries(DOGS.map((d) => [d.slug, d.starterCaption])),
+  )
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string | null>>({})
-  const requested = useRef(new Set<string>())
 
   useEffect(() => {
     getConfig()
@@ -38,13 +40,6 @@ function App() {
       setLoading((l) => ({ ...l, [slug]: false }))
     }
   }, [])
-
-  // Write a first caption the first time each dog is opened.
-  useEffect(() => {
-    if (requested.current.has(selected)) return
-    requested.current.add(selected)
-    void generate(selected)
-  }, [selected, generate])
 
   const dog = DOGS.find((d) => d.slug === selected) ?? DOGS[0]
   const caption = captions[dog.slug] ?? ''
