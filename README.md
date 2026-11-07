@@ -6,6 +6,25 @@ A sample social posting tool for a small dog rescue, built on the [Blotato API](
 
 Live: https://adopt-me-posts.vercel.app (demo mode: a fake Blotato answers until a real API key is set).
 
+## n8n workflow: Dog of the week
+
+`n8n/dog-of-the-week.json` posts one dog to Bluesky every Monday at 9:00 AM Hawaii time, rotating through the six in order (Mochi, Biscuit, Rocket, Pepper, Pip, Tank, then back to Mochi):
+
+1. **Get dog of the week:** `GET https://adopt-me-posts.vercel.app/api/dogs` returns this week's dog with its starter caption and public photo URL. It's static data with no Claude call, and `?date=YYYY-MM-DD` previews any week.
+2. **Upload photo to Blotato:** Media > Upload from the photo URL.
+3. **Post to Bluesky:** Post > Create with the caption and the uploaded media URL.
+4. **Wait 30 seconds**, then **Check post status:** Post > Get, once.
+
+It uses Blotato's official n8n node ([`@blotato/n8n-nodes-blotato`](https://github.com/Blotato-Inc/n8n-nodes-blotato), per [Blotato's n8n docs](https://help.blotato.com/integrations-and-automation-templates/n8n/n8n-blotato-node)). The API key lives only in an n8n credential, never in the workflow file.
+
+**Import it:**
+
+1. Install the node: in n8n, Settings > Community Nodes > Install > `@blotato/n8n-nodes-blotato` (n8n Cloud: search "Blotato" in the node panel).
+2. Import the workflow: Workflows > Import from File > `n8n/dog-of-the-week.json`, or `npx n8n import:workflow --input=n8n/dog-of-the-week.json`.
+3. Create a **Blotato API** credential with your key (keep the server as `https://backend.blotato.com`), and select it on the three Blotato nodes.
+4. In **Post to Bluesky**, pick the Bluesky account from the list.
+5. Click **Run now (testing)** to try it once, then activate the workflow so the Monday schedule runs. The workflow's time zone is set to Pacific/Honolulu.
+
 ## Using this repo with Claude Code
 
 The repo ships with two MCP servers and a skill, so Claude Code can do the same support work as the app's post doctor from the terminal.
