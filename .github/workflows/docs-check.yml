@@ -49,14 +49,15 @@ jobs:
             The source-page status file is /tmp/source-status.json. This is a read-only check: do not edit
             files or take any action. Return the structured output: confirmed differences in
             `differences` (empty if everything still matches), and anything you could not confirm either
-            way in `unverified`. Today is ${{ github.run_started_at }}.
+            way in `unverified`, and for every entry the pages you actually opened or searched to verify it in
+            `entries[].pages_opened`. Today is ${{ github.run_started_at }}.
           claude_args: |
             --model claude-sonnet-5-5
             --max-turns 20
             --mcp-config '{"mcpServers":{"blotato-docs":{"type":"http","url":"https://help.blotato.com/~gitbook/mcp"}}}'
             --allowedTools "Read,mcp__blotato-docs__searchDocumentation,mcp__blotato-docs__getPage"
             --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash,WebFetch,WebSearch,mcp__blotato-docs__sendFeedback"
-            --json-schema '{"type":"object","properties":{"checkedEntries":{"type":"integer"},"checkedSources":{"type":"integer"},"summary":{"type":"string"},"differences":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"kind":{"type":"string","enum":["source_missing","source_moved","wording_changed","wording_missing","code_changed","explanation_changed"]},"ours":{"type":"string"},"docs":{"type":"string"},"url":{"type":"string"},"suggestion":{"type":"string"}},"required":["entryId","kind","ours","docs","url","suggestion"]}},"unverified":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"item":{"type":"string"},"reason":{"type":"string"}},"required":["entryId","item","reason"]}}},"required":["checkedEntries","checkedSources","summary","differences","unverified"]}'
+            --json-schema '{"type":"object","properties":{"checkedEntries":{"type":"integer"},"checkedSources":{"type":"integer"},"summary":{"type":"string"},"differences":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"kind":{"type":"string","enum":["source_missing","source_moved","wording_changed","wording_missing","code_changed","explanation_changed"]},"ours":{"type":"string"},"docs":{"type":"string"},"url":{"type":"string"},"suggestion":{"type":"string"}},"required":["entryId","kind","ours","docs","url","suggestion"]}},"unverified":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"item":{"type":"string"},"reason":{"type":"string"}},"required":["entryId","item","reason"]}},"entries":{"type":"array","items":{"type":"object","properties":{"entryId":{"type":"string"},"result":{"type":"string","enum":["confirmed","difference","unverified","sources_only"]},"pages_opened":{"type":"array","items":{"type":"string"}}},"required":["entryId","result","pages_opened"]}}},"required":["checkedEntries","checkedSources","summary","differences","unverified","entries"]}'
 
   report:
     needs: check
@@ -92,6 +93,9 @@ jobs:
               then "### Unverified this run (shown here only, no issue)\n\n" +
                 ([.unverified[] | "- `\(.entryId)` · \(.item): \(.reason)"] | join("\n")) + "\n\n"
               else "### Unverified this run\n\nNone. Every check was confirmed.\n\n" end) +
+            "### Pages opened per entry\n\n" +
+            "| Entry | Result | Pages opened or searched to verify it |\n| --- | --- | --- |\n" +
+            ([(.entries // [])[] | "| `\(.entryId)` | \(.result) | \(if (.pages_opened | length) > 0 then (.pages_opened | map("[\(sub("https://help.blotato.com"; ""))](\(.))") | join("<br>")) else "none beyond the source-page status check" end) |"] | join("\n")) + "\n\n" +
             "### Claude'"'"'s summary\n\n\(.summary)\n"' >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$COUNT" -eq 0 ]; then
