@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { DEMO_ID_RE, encodeDemoPostId, type DemoOutcome } from '../../shared/demoPostIds.js'
+import { countForBlotato } from '../../shared/textCount.js'
 import type {
   BlotatoAccount,
   BlotatoErrorBody,
@@ -48,10 +49,8 @@ type DemoReply = { status: number; body: unknown }
 const reqId = () => `demo-req-${randomUUID().slice(0, 8)}`
 const err = (status: number, body: BlotatoErrorBody): DemoReply => ({ status, body: { reqId: reqId(), ...body } })
 
-// Bluesky counts graphemes, so an emoji counts as one character.
-export function countGraphemes(text: string): number {
-  return [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text)].length
-}
+// Blotato counts emoji and full-width characters as 2 toward the limit (Error Reference, 20005).
+export { countGraphemes } from '../../shared/textCount.js'
 
 function isFetchableUrl(url: unknown): boolean {
   if (typeof url !== 'string') return false
@@ -139,7 +138,7 @@ function createPost(body: unknown, fail: DemoFailure | null, now: number): DemoR
   // Decide now how this post will end. Failures surface later as status "failed", like the real queue.
   let outcome = 'ok'
   const texts = [p.content.text, ...(p.content.additionalPosts ?? []).map((a) => a.text)]
-  const longest = Math.max(...texts.map(countGraphemes))
+  const longest = Math.max(...texts.map(countForBlotato))
   const mediaUrls = [p.content.mediaUrls, ...(p.content.additionalPosts ?? []).map((a) => a.mediaUrls)].flat()
 
   if (fail === 'disconnected-account' || p.accountId !== DEMO_ACCOUNT.id) outcome = 'dis'

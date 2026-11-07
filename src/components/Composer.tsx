@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { RESCUE_NAME, type Dog } from '../../shared/dogs'
 import { localTimeZoneLabel, nextMonday9am, toLocalInputValue, type SendOption } from '../lib/posts'
-import { BLUESKY_LIMIT, countGraphemes } from '../lib/text'
+import { BLUESKY_LIMIT, countCaption } from '../lib/text'
 
 interface Props {
   dog: Dog
@@ -20,7 +20,7 @@ interface Props {
 
 export function Composer(props: Props) {
   const { dog, caption, loading, error, handle, accountReady, sending, sendStatus, onChange, onRewrite, onPost } = props
-  const count = countGraphemes(caption)
+  const count = countCaption(caption)
   const over = count > BLUESKY_LIMIT
   const pct = Math.min(100, (count / BLUESKY_LIMIT) * 100)
   const countText = over ? `${count}/${BLUESKY_LIMIT} · ${count - BLUESKY_LIMIT} over` : `${count}/${BLUESKY_LIMIT}`
@@ -99,7 +99,7 @@ export function Composer(props: Props) {
             disabled={loading || sending}
             aria-busy={loading}
             aria-invalid={over}
-            aria-describedby="caption-count"
+            aria-describedby="caption-count caption-count-note"
           />
           <div className="meter">
             <div className="meter__track" aria-hidden="true">
@@ -110,6 +110,9 @@ export function Composer(props: Props) {
               {countText}
             </span>
           </div>
+          <p id="caption-count-note" className="meter__note">
+            Counted the way Blotato does: emoji and full-width characters count as 2.
+          </p>
           {over && !loading && (
             <p className="inline-error">Bluesky stops at {BLUESKY_LIMIT} characters. Trim {count - BLUESKY_LIMIT} to post.</p>
           )}

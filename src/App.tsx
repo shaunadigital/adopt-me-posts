@@ -5,12 +5,13 @@ import { DogPicker } from './components/DogPicker'
 import { Header } from './components/Header'
 import { PostsPanel } from './components/PostsPanel'
 import { KnownErrorsPage } from './components/KnownErrorsPage'
-import { PostDoctor, type TrimState } from './components/PostDoctor'
+import { PostDoctor, type DoctorMode, type TicketState, type TrimState } from './components/PostDoctor'
 import { TracePanel } from './components/TracePanel'
 import {
   ApiError,
   createPost,
   diagnose,
+  diagnoseTicket,
   getAccounts,
   getConfig,
   getPostStatus,
@@ -20,6 +21,9 @@ import {
   type PostStatusResult,
 } from './lib/api'
 import { buildExamples } from './lib/examples'
+import { TICKET_EXAMPLES, exampleIds, findPostId, type TicketExample, type TicketLookup } from './lib/tickets'
+
+const TICKET_EXAMPLES_BY_KEY = Object.fromEntries(TICKET_EXAMPLES.map((e) => [e.key, e])) as Record<TicketExample['key'], TicketExample>
 import {
   RESULT_LABEL,
   formatLater,
@@ -31,7 +35,7 @@ import {
   type PostRecord,
   type TraceStep,
 } from './lib/posts'
-import { countGraphemes } from './lib/text'
+import { countCaption } from './lib/text'
 
 const DEMO_HANDLE = 'adoptmeposts.bsky.social'
 const TICK_MS = 3000
@@ -334,7 +338,7 @@ function App() {
             : 'starter',
       http: source.http,
       ms: source.ms,
-      note: `${countGraphemes(text)} characters for Bluesky${
+      note: `${countCaption(text)} characters for Bluesky${
         source.kind === 'starter'
           ? ', hand-written starter'
           : source.kind === 'edited'
@@ -487,6 +491,8 @@ function App() {
   const [doctorErrors, setDoctorErrors] = useState<Record<string, string | null>>({})
   const doctorTried = useRef(new Set<string>())
   const [trim, setTrim] = useState<TrimState>({ status: 'idle', text: '' })
+  const [doctorMode, setDoctorMode] = useState<DoctorMode>('post')
+  const [ticket, setTicket] = useState<TicketState>({ text: '', exampleKey: null, status: 'idle' })
 
   const runDoctor = useCallback(
     async (p: PostRecord) => {
@@ -527,6 +533,62 @@ function App() {
     } catch (err) {
       setTrim({ status: 'error', text: '', error: `Couldn't shorten the caption: ${describeError(err).text}` })
     }
+  }
+
+  // ---- Paste a ticket ----
+
+  function pickTicketExample(ex: TicketExample) {
+    setTicket({ text: ex.text(exampleIds(posts)), exampleKey: ex.key, status: 'idle' })
+  }
+
+  async function runTicket() {
+    const text = ticket.text.trim()
+    if (!text) return
+    // Unedited examples show their saved result: no Claude call, no lookup.
+    const ex = ticket.exampleKey ? TICKET_EXAMPLES_BY_KEY[ticket.exampleKey] : undefined
+    if (ex?.saved) {
+      const saved = ex.saved
+      const ids = exampleIds(posts)
+      const id = saved.lookup?.postSubmissionId && (ex.key === 'rocket' ? ids.rocket : ex.key === 'scheduled' ? ids.pip : undefined)
+      setTicket((t) => ({
+        ...t,
+        status: 'done',
+        doctor: { ...saved.doctor },
+        // Point "Show this post" at this browser's copy of the example post.
+        lookup: saved.lookup ? { ...saved.lookup, postSubmissionId: id || saved.lookup.postSubmissionId, savedHere: !!id } : null,
+      }))
+      return
+    }
+
+    setTicket((t) => ({ ...t, status: 'working', error: undefined }))
+    try {
+      const id = findPostId(text)
+      let lookup: TicketLookup | null = null
+      let apiLookup: Parameters<typeof diagnoseTicket>[0]['lookup'] = null
+      const saved = id ? posts.find((p) => p.postSubmissionId === id) : undefined
+      if (id) {
+        try {
+          const res = await getPostStatus(id)
+          lookup = { postSubmissionId: id, savedHere: !!saved, dogName: saved?.dogName, liveStatus: res.data.status, raw: res.data }
+          apiLookup = { postSubmissionId: id, liveStatus: res.data, liveError: null }
+        } catch (err) {
+          const e = describeError(err)
+          lookup = { postSubmissionId: id, savedHere: !!saved, dogName: saved?.dogName, liveError: e.text, raw: e.body ?? null }
+          apiLookup = { postSubmissionId: id, liveStatus: null, liveError: { status: e.status ?? 0, message: e.text } }
+        }
+      }
+      const doctor = await diagnoseTicket({ ticket: text, lookup: apiLookup, post: saved })
+      setTicket((t) => ({ ...t, status: 'done', doctor, lookup }))
+    } catch (err) {
+      setTicket((t) => ({ ...t, status: 'error', error: `The post doctor couldn't read this ticket: ${describeError(err).text}` }))
+    }
+  }
+
+  function showPost(postSubmissionId: string) {
+    const p = posts.find((x) => x.postSubmissionId === postSubmissionId)
+    if (!p) return
+    setSelectedPost(p.localId)
+    document.getElementById('posts-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   async function postTrimmed() {
@@ -601,6 +663,14 @@ function App() {
                   onTrimChange={(text) => setTrim((t) => ({ ...t, text }))}
                   onTrimPost={() => void postTrimmed()}
                   onTrimCancel={() => setTrim({ status: 'idle', text: '' })}
+                  mode={doctorMode}
+                  onModeChange={setDoctorMode}
+                  ticket={ticket}
+                  onTicketText={(text) => setTicket((t) => ({ ...t, text, exampleKey: null }))}
+                  onTicketExample={pickTicketExample}
+                  onTicketRun={() => void runTicket()}
+                  onTicketReply={(text) => setTicket((t) => (t.doctor ? { ...t, doctor: { ...t.doctor, reply: text } } : t))}
+                  onShowPost={showPost}
                 />
               }
             />

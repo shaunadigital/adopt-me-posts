@@ -3,7 +3,7 @@
 // answer for them like for any demo post (the in-progress one publishes a few seconds after load).
 import { DOGS } from '../../shared/dogs'
 import { encodeDemoPostId } from '../../shared/demoPostIds'
-import { countGraphemes } from './text'
+import { countCaption } from './text'
 import { formatWhen, nextMonday9am, type DoctorResult, type PostRecord, type TraceStep } from './posts'
 
 // 312 characters on purpose: the failed example shows the post doctor's most common case.
@@ -51,7 +51,7 @@ function captionStep(text: string, at: number, claudeMs?: number): TraceStep {
     meta: claudeMs ? `Claude · ${(claudeMs / 1000).toFixed(1)} s` : 'starter',
     http: claudeMs ? 200 : undefined,
     ms: claudeMs,
-    note: `${countGraphemes(text)} characters for Bluesky${claudeMs ? '' : ', hand-written starter'}`,
+    note: `${countCaption(text)} characters for Bluesky${claudeMs ? '' : ', hand-written starter'}`,
     at: iso(at),
   }
 }
@@ -86,7 +86,7 @@ export function buildExamples(handle: string, now = Date.now()): PostRecord[] {
 
   // 1. Failed: text over Bluesky's 300-character limit. Selected on load.
   const rocketAt = now - 42 * 60_000
-  const rocketId = encodeDemoPostId(rocketAt, null, `long${countGraphemes(ROCKET_TOO_LONG)}`)
+  const rocketId = encodeDemoPostId(rocketAt, null, `long${countCaption(ROCKET_TOO_LONG)}`)
   // Blotato's documented wording (Error Reference, error code 20005).
   const tooLong = 'Text length exceeds the character limit of 300 characters for platform bluesky (error code 20005)'
   const rocket: PostRecord = {

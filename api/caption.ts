@@ -4,7 +4,7 @@
 // "Rewrite with Claude" so the new one takes a different angle.
 import Anthropic from '@anthropic-ai/sdk'
 import { RESCUE_NAME, findDog } from '../shared/dogs.js'
-import { countGraphemes } from './_lib/demo.js'
+import { countForBlotato } from '../shared/textCount.js'
 import { json, readJson } from './_lib/http.js'
 import { rateLimited } from './_lib/rateLimit.js'
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 What the foster says:
 ${dog.facts.map((f) => `- ${f}`).join('\n')}`
   if (trimFrom) {
-    prompt += `\n\nThis caption was too long for Bluesky (${countGraphemes(trimFrom)} characters, limit 300). Shorten it to under 280 characters. Keep its voice, its facts and its closing next step, cut words rather than changing the meaning, and add nothing new:\n${trimFrom}`
+    prompt += `\n\nThis caption was too long for Bluesky (${countForBlotato(trimFrom)} characters as Blotato counts them, where emoji and full-width characters count as 2; limit 300). Shorten it to under 280 characters. Keep its voice, its facts and its closing next step, cut words rather than changing the meaning, and add nothing new:\n${trimFrom}`
   } else if (previous) {
     prompt += `\n\nThe current caption is below. Write a fresh one with a different opening and a different detail up front:\n${previous}`
   }
@@ -70,7 +70,7 @@ ${dog.facts.map((f) => `- ${f}`).join('\n')}`
       if (attempt === 1) {
         messages[0] = {
           role: 'user',
-          content: `${prompt}\n\nYour last draft was ${countGraphemes(caption)} characters. Keep this one under 260.`,
+          content: `${prompt}\n\nYour last draft was ${countForBlotato(caption)} characters. Keep this one under 260.`,
         }
       }
       const res = await client.beta.messages.create({
@@ -98,15 +98,15 @@ ${dog.facts.map((f) => `- ${f}`).join('\n')}`
           dog: dog.slug,
           attempt,
           model: res.model,
-          characters: countGraphemes(caption),
+          characters: countForBlotato(caption),
           inputTokens: res.usage.input_tokens,
           outputTokens: res.usage.output_tokens,
         }),
       )
-      if (caption && countGraphemes(caption) <= LIMIT) break
+      if (caption && countForBlotato(caption) <= LIMIT) break
     }
     if (!caption) return json(502, { message: 'Claude returned an empty caption. Try again.' })
-    return json(200, { caption, characters: countGraphemes(caption), model: MODEL, ms: Date.now() - started })
+    return json(200, { caption, characters: countForBlotato(caption), model: MODEL, ms: Date.now() - started })
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) {
       console.error('caption: Anthropic rejected the API key')

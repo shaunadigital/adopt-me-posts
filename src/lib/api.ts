@@ -104,6 +104,32 @@ export const writeCaption = (dogSlug: string, previous?: string, trimFrom?: stri
     body: JSON.stringify({ dogSlug, previous, trimFrom }),
   })
 
+/** POST /api/doctor for a support ticket. post: the saved post the ticket names, if this browser has it. */
+export const diagnoseTicket = (input: {
+  ticket: string
+  lookup: { postSubmissionId: string; liveStatus: PostStatusResult | null; liveError: { status: number; message: string } | null } | null
+  post?: PostRecord
+}) =>
+  request<DoctorResult>('/api/doctor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ticket: input.ticket,
+      lookup: input.lookup,
+      ...(input.post
+        ? {
+            dogName: input.post.dogName,
+            caption: input.post.caption,
+            failedStep: input.post.failedStep,
+            httpStatus: input.post.httpStatus,
+            error: input.post.error,
+            rawError: input.post.rawError ?? null,
+            trace: input.post.trace.map(({ key, label, state, meta, note }) => ({ key, label, state, meta, note })),
+          }
+        : {}),
+    }),
+  })
+
 /** POST /api/doctor with a failed post's evidence. */
 export const diagnose = (p: PostRecord) =>
   request<DoctorResult>('/api/doctor', {
