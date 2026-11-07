@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "blotato-docs": {
+      "type": "http",
+      "url": "https://help.blotato.com/~gitbook/mcp"
+    },
+    "blotato": {
+      "type": "http",
+      "url": "https://mcp.blotato.com/mcp",
+      "headers": {
+        "blotato-api-key": "${BLOTATO_API_KEY:-}"
+      }
+    }
+  }
+}

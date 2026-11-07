@@ -58,3 +58,9 @@ Routes pass Blotato's status and body straight through, so the frontend sees rea
 - `npm run dev` runs the front end only (Vite). `/api` routes need `vercel dev --listen 3000`.
 - `npm run test:demo` calls every route in demo mode (default `http://localhost:3000`; set `BASE_URL` to test a deploy).
 - Run `npm run build` before pushing. It typechecks `api/` too (`tsconfig.api.json`).
+
+## Claude Code tooling
+- `.mcp.json`: `blotato-docs` (`https://help.blotato.com/~gitbook/mcp`, public, no key; tools `searchDocumentation`, `getPage`) and `blotato` (`https://mcp.blotato.com/mcp`, header `blotato-api-key: ${BLOTATO_API_KEY:-}` from the shell environment, never written in the file). The `:-` default keeps the file loading when the key isn't set.
+- `/post-doctor` skill: `.claude/skills/post-doctor/SKILL.md`. It uses `scripts/match-error.ts` (the app's matcher, run with `node scripts/match-error.ts --text "..."`), the docs MCP, and the Blotato MCP or the app's demo API for status. It has the same rules as `/api/doctor` and a docs-only mode with no key.
+- Tested 2026-11-07: the docs MCP answered "error code 20005" with the Error Reference row (same wording as known-errors.json). `claude mcp list` loads both servers from `.mcp.json` with no key set.
+- **Not tested yet: the Blotato MCP (`blotato` server).** Test it at go-live (PLAN step 10) after the key is added: export `BLOTATO_API_KEY`, approve the server in `/mcp`, run `blotato_list_accounts`, then `/post-doctor` with a real postSubmissionId.
