@@ -28,6 +28,14 @@ Social posting tool for a dog rescue (made-up dogs), with a built-in post doctor
 
 Routes pass Blotato's status and body straight through, so the frontend sees real error shapes.
 
+| `POST /api/caption` `{ dogSlug, previous? }` | none: Claude (`claude-sonnet-5-5`, effort low, `fallbacks: "default"`) writes a Bluesky caption under 300 characters, with no emoji and at most one hashtag. Returns `{ caption, characters, model, ms }`. Needs `ANTHROPIC_API_KEY`, which is set in Vercel Production only, so this route returns 503 under `vercel dev`. There's a light per-IP limit of 12/min. |
+
+## Main screen
+- The design spec is `~/Desktop/claudecode/jobs/blotato/design/DESIGN.md`, with `main-screen-reference.html` as the mockup. Tokens are CSS variables in `src/index.css`; components are in `src/components/`.
+- Dogs: `shared/dogs.ts` (used by the client and `api/caption.ts`; keep it free of Node and browser APIs). Photos are in `public/dogs/`, with credits in `CREDITS.md`.
+- `shared/` lives outside `api/` because `vercel dev` routes every `/api/*` URL to functions, so the browser can't load source files from there.
+- The "All posts" and "Post trace" panels are empty states until posting is wired up. The "Post {dog}" button is disabled for now.
+
 ## Demo mode
 - When `BLOTATO_API_KEY` is empty, the app runs in demo mode: `api/_lib/demo.ts` answers instead of Blotato, and the home page shows a "Demo mode" label.
 - Demo account: Bluesky `adoptmeposts.bsky.social` (id `demo-bluesky-1`). Posts are `in-progress` for 4 seconds, then `published` or `failed`. Scheduled posts stay `scheduled` until their time. Post state is stateless, encoded in the ID.

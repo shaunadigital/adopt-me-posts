@@ -1,40 +1,78 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { DOGS } from '../shared/dogs'
+import { Composer } from './components/Composer'
+import { DogPicker } from './components/DogPicker'
+import { Header } from './components/Header'
+import { PostsPanel } from './components/PostsPanel'
+import { TracePanel } from './components/TracePanel'
+import { getAccounts, getConfig, writeCaption } from './lib/api'
 
 function App() {
   // Default to demo mode until the server says otherwise.
   const [demoMode, setDemoMode] = useState(true)
+  const [handle, setHandle] = useState<string | null>(null)
+  const [selected, setSelected] = useState(DOGS[0].slug)
+  const [captions, setCaptions] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState<Record<string, boolean>>({})
+  const [errors, setErrors] = useState<Record<string, string | null>>({})
+  const requested = useRef(new Set<string>())
 
   useEffect(() => {
-    fetch('/api/config')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: { demoMode?: boolean } | null) => {
-        if (data && typeof data.demoMode === 'boolean') setDemoMode(data.demoMode)
-      })
+    getConfig()
+      .then((c) => setDemoMode(c.demoMode))
+      .catch(() => {})
+    getAccounts()
+      .then((a) => setHandle(a.items[0]?.username.replace(/^@/, '') ?? null))
       .catch(() => {})
   }, [])
 
+  const generate = useCallback(async (slug: string, previous?: string) => {
+    setLoading((l) => ({ ...l, [slug]: true }))
+    setErrors((e) => ({ ...e, [slug]: null }))
+    try {
+      const res = await writeCaption(slug, previous)
+      setCaptions((c) => ({ ...c, [slug]: res.caption }))
+    } catch (err) {
+      setErrors((e) => ({ ...e, [slug]: err instanceof Error ? err.message : 'Could not write a caption.' }))
+    } finally {
+      setLoading((l) => ({ ...l, [slug]: false }))
+    }
+  }, [])
+
+  // Write a first caption the first time each dog is opened.
+  useEffect(() => {
+    if (requested.current.has(selected)) return
+    requested.current.add(selected)
+    void generate(selected)
+  }, [selected, generate])
+
+  const dog = DOGS.find((d) => d.slug === selected) ?? DOGS[0]
+  const caption = captions[dog.slug] ?? ''
+
   return (
-    <main style={{ maxWidth: 640, margin: '0 auto', padding: '64px 16px', textAlign: 'center' }}>
-      {demoMode && (
-        <span
-          style={{
-            display: 'inline-block',
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: 0.5,
-            padding: '4px 10px',
-            borderRadius: 999,
-            background: '#fef3c7',
-            color: '#92400e',
-            border: '1px solid #fcd34d',
-          }}
-        >
-          Demo mode
-        </span>
-      )}
-      <h1 style={{ margin: '16px 0 8px' }}>Adopt Me Posts</h1>
-      <p style={{ color: '#6b7280', margin: 0 }}>Social posts for rescue dogs. Coming soon.</p>
-    </main>
+    <>
+      <Header demoMode={demoMode} handle={handle} />
+      <main className="page">
+        <DogPicker dogs={DOGS} selected={selected} onSelect={setSelected} />
+        <div className="columns">
+          <div className="columns__left">
+            <Composer
+              dog={dog}
+              caption={caption}
+              loading={!!loading[dog.slug]}
+              error={errors[dog.slug] ?? null}
+              handle={handle}
+              onChange={(text) => setCaptions((c) => ({ ...c, [dog.slug]: text }))}
+              onRewrite={() => void generate(dog.slug, caption || undefined)}
+            />
+            <PostsPanel />
+          </div>
+          <div className="columns__right">
+            <TracePanel />
+          </div>
+        </div>
+      </main>
+    </>
   )
 }
 
