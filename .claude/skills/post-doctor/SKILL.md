@@ -48,12 +48,12 @@ Input: `$ARGUMENTS`, which is a postSubmissionId, a pasted customer message, or 
 
    Reply to the customer:
    <warm, under 120 words, plain words, no jargon or error codes, no blame, no links,
-    no promises the evidence doesn't support, signed "The Adopt Me Posts team".
+    no promises the evidence doesn't support, no em dashes, signed "The Adopt Me Posts team".
     With no post ID and not enough to go on, politely ask for the post ID, or the dog's
     name and roughly when they posted.>
 
    Sources:
-   - <title> — <url>   (only per rule 2; omit the section if there are none)
+   - <title>: <url>   (only per rule 2; omit the section if there are none)
 
    What to check: <only when nothing matched>
    ```

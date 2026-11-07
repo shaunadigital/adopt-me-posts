@@ -2,6 +2,9 @@
 
 Social posting tool for a dog rescue (made-up dogs), with a built-in post doctor. React + Vite + TypeScript on Vercel, serverless functions in `api/`, Blotato API for posting, Anthropic API for captions.
 
+## Writing rules
+- No em dashes in any user-facing text: app UI, Known errors page, example tickets, starter captions, README, n8n agent text, and the prompts that make Claude write for users (caption, doctor, n8n agent, /post-doctor). Use commas, periods or colons.
+
 ## Commit rules
 - Author every commit as: `Shauna Arnold <8376913+shaunadigital@users.noreply.github.com>`
 - Never add AI co-author lines (`Co-Authored-By: Claude ...`), "Generated with Claude Code", or any other AI attribution to commits, PR titles, or PR bodies.
@@ -54,6 +57,11 @@ Routes pass Blotato's status and body straight through, so the frontend sees rea
 - When `BLOTATO_API_KEY` is empty, the app runs in demo mode: `api/_lib/demo.ts` answers instead of Blotato, and the home page shows a "Demo mode" label.
 - Demo account: Bluesky `adoptmeposts.bsky.social` (id `demo-bluesky-1`). Posts are `in-progress` for 4 seconds, then `published` or `failed`. Scheduled posts stay `scheduled` until their time. Post state is stateless, encoded in the ID.
 - Force a failure with `?demoFail=` or an `x-demo-fail` header: `invalid-key`, `disconnected-account`, `bad-media-url`, `too-long`. Text over 300 graphemes, unknown account IDs and unfetchable media URLs also fail on their own. This is ignored when a real key is set.
+
+## Deploys
+- Pushes to `main` deploy through Vercel's GitHub App (project `adopt-me-posts`, production branch `main`, no ignored-build-step command, no root directory).
+- 2026-11-07: three pushes got no deployment. One was the first commit, pushed before the Vercel project existed. The other two (`03a60c5`, `c5d86aa`) were ordinary commits that left no trace on Vercel (no deployment, no event) or GitHub (no Vercel status); empty "Redeploy" commits deployed them. Project settings were fine, and the repo has no webhooks; the GitHub App's delivery log is only visible to Vercel. The Git link was reconnected (`vercel git disconnect` / `vercel git connect`) the same day.
+- If a push doesn't deploy within a few minutes: check `gh api repos/shaunadigital/adopt-me-posts/commits/<sha>/statuses` for a "Vercel" status, then push an empty commit or run `vercel deploy --prod`.
 
 ## Local dev and tests
 - `npm run dev` runs the front end only (Vite). `/api` routes need `vercel dev --listen 3000`.

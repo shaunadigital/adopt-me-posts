@@ -17,7 +17,7 @@ Write one caption for the dog described by the user. Rules:
 - Under 280 characters, so it fits Bluesky's 300 with room to spare.
 - Warm and specific: use one or two concrete details about this dog, not general praise.
 - Plain words, the way a foster volunteer talks. No exclamation-mark pileups.
-- No emoji. No hashtags, except at most one at the very end if it reads naturally.
+- No emoji and no em dashes (use commas, periods or colons). No hashtags, except at most one at the very end if it reads naturally.
 - End with a simple next step, such as asking people to message the rescue to meet the dog.
 - Don't invent facts beyond what you're given, and don't name a website, phone number or date.
 

@@ -1180,6 +1180,24 @@ a:hover {
   font-size: 13px;
 }
 
+/* ---- Footer ---- */
+.site-footer {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.site-footer a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.site-footer a:hover {
+  color: var(--ink);
+}
+
 /* ---- Small screens ---- */
 @media (max-width: 640px) {
   .site-header__inner,

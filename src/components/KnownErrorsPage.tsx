@@ -1,6 +1,7 @@
 // Known errors: every entry in docs/known-errors.json with its source links.
 // Reached from the post doctor (#known-errors).
 import data from '../../docs/known-errors.json' with { type: 'json' }
+import { Footer } from './Footer'
 import { Header } from './Header'
 
 interface Entry {
@@ -70,6 +71,7 @@ export function KnownErrorsPage({ demoMode, handle }: { demoMode: boolean; handl
           ))}
         </ol>
       </main>
+      <Footer />
     </>
   )
 }

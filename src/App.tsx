@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { DOGS, type Dog } from '../shared/dogs'
 import { Composer } from './components/Composer'
 import { DogPicker } from './components/DogPicker'
+import { Footer } from './components/Footer'
 import { Header } from './components/Header'
 import { PostsPanel } from './components/PostsPanel'
 import { KnownErrorsPage } from './components/KnownErrorsPage'
@@ -686,6 +687,7 @@ function App() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   )
 }
