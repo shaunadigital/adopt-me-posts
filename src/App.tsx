@@ -19,7 +19,6 @@ import {
 import { buildExamples } from './lib/examples'
 import {
   RESULT_LABEL,
-  STATUS_LABEL,
   formatLater,
   formatMs,
   formatWhen,
@@ -418,7 +417,7 @@ function App() {
         setSendStatus(
           done.status === 'scheduled'
             ? `${postDog.name}'s post is scheduled for ${formatWhen(when!)}.`
-            : `${postDog.name}'s post was sent. Status: ${STATUS_LABEL[done.status]}.`,
+            : `${postDog.name}'s post was sent to Blotato. Follow it in the post trace.`,
         )
       } catch (err) {
         const e = describeError(err)
