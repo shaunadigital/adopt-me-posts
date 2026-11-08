@@ -2,9 +2,11 @@
 
 # Why did my Bluesky post fail when it looked under 300 characters?
 
-Bluesky posts can be up to 300 characters. Sometimes a post that looks shorter than that still fails with a message like:
+Bluesky posts can be up to 300 characters. Sometimes a post that looks shorter than that is turned down when you send it, with a message like:
 
-> Text length exceeds the character limit of 300 characters for platform bluesky (error code 20005)
+> Text length exceeds the character limit of 300 characters for platform 'bluesky'
+
+The post isn't sent at all, so nothing goes out and there's nothing to delete.
 
 ## Why this happens
 

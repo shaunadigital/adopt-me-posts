@@ -72,7 +72,7 @@ Error codes (guide, Upload Media):
 | `90009` | Blotato could not fetch the media URL. Confirm the URL loads or downloads without signing in, then try again. |
 | `9999` | Unknown error. Example body: `{ "code": 9999, "message": "An unknown error occurred." }` (HTTP 500) |
 
-The docs don't give the HTTP status for `90009`. The demo uses 422, the spec's validation status for this route. Limit: 1GB. The spec says 10 requests/min and the guide says 30.
+The docs don't give the HTTP status for `90009`. Real Blotato answered a URL that 404s with 500 and code 90000 instead (see "Checked against real Blotato"). Limit: 1GB. The spec says 10 requests/min and the guide says 30.
 
 The docs disagree on whether media must be uploaded first. The spec says `mediaUrls` "must originate from the blotato domain". The guide's Bluesky section and media table say public URLs can go straight into `mediaUrls`. This app uploads first, which is safe either way.
 
@@ -141,15 +141,38 @@ Documented failure example (guide, error handling):
 - 300 characters per post. The demo counts graphemes, which is how Bluesky counts. Blotato's Error Reference says emoji and full-width characters count as 2 toward error 20005, so Blotato's count can be higher than ours.
 - Up to 4 images (1080x1080 square, 1200x627 landscape, 627x1200 portrait), or one video.
 
-## Demo-mode failures and where their wording comes from
+## Checked against real Blotato (2026-11-07)
+
+Every route was called with a real key against a real Bluesky account (`adoptmeposts.bsky.social`). Where real Blotato differed from the docs or the old demo, the demo now copies real Blotato.
+
+| Call | Real response | Was in the demo |
+| --- | --- | --- |
+| `GET /v2/users/me/accounts` | 200 `{ items: [{ id: "140099", platform: "bluesky", username: "adoptmeposts.bsky.social", fullname: "" }] }`: numeric-string ID, empty fullname | id `demo-bluesky-1`, fullname `Adopt Me Posts` |
+| `POST /v2/media/uploads` + PUT | 201 `{ presignedUrl, publicUrl }`; publicUrl on `database.blotato.io/storage/v1/object/public/public_media/...` | Same shape |
+| `POST /v2/posts` (now) | 201 `{ postSubmissionId }` (UUID) | Same |
+| `POST /v2/posts` (scheduled) | 201 `{ postSubmissionId, scheduledTime: "2026-11-08T00:10:00.000Z" }` | Same |
+| `GET /v2/posts/{id}` | `in-progress`, then `{ status: "published", publicUrl: "https://bsky.app/profile/adoptmeposts.bsky.social/post/..." }` about 5 s later; scheduled posts return `{ status: "scheduled", scheduledTime }` | Same |
+| `GET /v2/posts/{made-up id}` | 200 `{ postSubmissionId: "<the id>", status: "in-progress" }`, also for text that isn't a UUID | 404 `Not found` |
+| Wrong key | 401 `{ "message": "Unauthorized" }`, nothing else | 401 `Invalid API key` |
+| Text over 300 (Blotato's count) | **422 at create time**, no post ID: `{ statusCode: 422, message: "Text length exceeds the character limit of 300 characters for platform 'bluesky'", reqId, code: 20005, action: "Shorten each post in details.overLimitPosts...", details: { platform, maxAllowed: 300, overLimitPosts: [{ index, characterCount, text }] } }` | 201, then status `failed` with `...platform bluesky (error code 20005)` |
+| `POST /v2/media` with a URL that 404s | **500**, code **90000**: `Failed to read media metadata. Is the file accessible and a valid media file?` | 422, code 90009 |
+| Post with a `mediaUrls` entry that 404s | 201, then status `failed`, errorMessage `Failed to fetch media URL: 404 Not Found` | `Blotato could not fetch the media URL...` |
+
+Not reproduced for real: `Invalid account credentials` (needs a disconnected account) and code 90009. Code 90000 isn't in Blotato's docs.
+
+Error bodies from real Blotato carry `statusCode`, `message` and `reqId`, plus `code`, `action` and `details` when there are any. The 401 is the exception: only `message`.
+
+## Demo-mode failures
 
 | Failure | Where it shows | Wording | Source |
 | --- | --- | --- | --- |
-| `invalid-key` | Any route, HTTP 401 | `Invalid API key` | Paraphrased from the guide's 401 "invalid API key"; the exact body text isn't documented |
-| `disconnected-account` | Post status `failed` | `Invalid account credentials` | Guide, Post Failure example |
-| `bad-media-url` | `POST /v2/media` 422 with code 90009, or post status `failed` | `Blotato could not fetch the media URL. Confirm the URL loads or downloads without signing in, then try again.` | Guide, Upload Media error codes |
-| `too-long` | Post status `failed` | `Text length exceeds the character limit of 300 characters for platform bluesky (error code 20005)` | Error Reference, Plan Limit Errors (https://help.blotato.com/support/errors). The docs don't say whether it comes at create time or as the post's errorMessage, or how the platform name is written. The earlier demo wording ("Post text is N characters...") was invented and is no longer used. |
-| Unknown post ID | Status route 404 | `{ "statusCode": 404, "message": "Not found" }` | Guide example |
+| `invalid-key` | Any route, HTTP 401 | `{ "message": "Unauthorized" }` | Real Blotato |
+| `disconnected-account` | Post status `failed` | `Invalid account credentials` | Guide, Post Failure example (not reproduced for real) |
+| `bad-media-url` | `POST /v2/media` 500 with code 90000, or post status `failed` | `Failed to read media metadata. Is the file accessible and a valid media file?` / `Failed to fetch media URL: 404 Not Found` | Real Blotato |
+| `too-long` | `POST /v2/posts` 422, code 20005 | `Text length exceeds the character limit of 300 characters for platform 'bluesky'`, with `action` and `details.overLimitPosts` | Real Blotato |
+| Unknown post ID | Status route 200 | `{ "postSubmissionId": "<id>", "status": "in-progress" }` | Real Blotato, and the Post lifecycle page |
+
+Demo IDs with outcome `long<N>` only exist in posts saved before too-long moved to create time; they still fail at status, with the real wording.
 
 ## Known errors
 

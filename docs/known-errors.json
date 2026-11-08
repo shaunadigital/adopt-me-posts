@@ -20,7 +20,8 @@
           "invalid api key",
           "authorization failed",
           "wrong blotato api key",
-          "invalid credentials"
+          "invalid credentials",
+          "unauthorized"
         ]
       },
       "stage": "Any request to Blotato",
@@ -41,7 +42,7 @@
         }
       ],
       "inDocs": true,
-      "docsNote": "Our demo returns { \"message\": \"Invalid API key\" }. The docs name the error as 401 \"invalid API key\" but don't show the exact response body."
+      "docsNote": "Checked against real Blotato on 2026-11-07: a wrong key got HTTP 401 with the body { \"message\": \"Unauthorized\" } and nothing else. The docs name the error as 401 \"invalid API key\" but don't show the exact response body. Our demo now returns the same body as real Blotato."
     },
     {
       "id": "subscription-403",
@@ -166,6 +167,7 @@
       "id": "text-too-long-20005",
       "title": "Text over the platform's character limit (error code 20005)",
       "wording": [
+        "Text length exceeds the character limit of 300 characters for platform 'bluesky'",
         "Text length exceeds the character limit of N characters for platform X (error code 20005)"
       ],
       "match": {
@@ -178,9 +180,9 @@
           "error code 20005"
         ]
       },
-      "stage": "Publishing",
-      "cause": "The post text is longer than the platform allows. Bluesky's limit is 300 characters per post. Blotato counts emoji and full-width characters as 2.",
-      "fix": "Shorten the text (and any thread posts named in the error details), then send it again.",
+      "stage": "Creating the post",
+      "cause": "The post text is longer than the platform allows, so Blotato rejects the post when it's created and it never goes out. Bluesky's limit is 300 characters per post. Blotato counts emoji and full-width characters as 2.",
+      "fix": "Shorten the text (and any thread posts listed in the error details), then send it again. Nothing was posted, so there is nothing to delete first.",
       "sources": [
         {
           "title": "Error Reference: Plan Limit Errors",
@@ -192,7 +194,7 @@
         }
       ],
       "inDocs": true,
-      "docsNote": "The docs don't say whether this comes back when the post is created or later as the post's errorMessage, or how the platform name is written. Our demo returns it as the failed post's errorMessage with the platform written as 'bluesky'."
+      "docsNote": "Checked against real Blotato on 2026-11-07: a 301-character Bluesky post was rejected right away when it was created: HTTP 422, code 20005, the message above with 'bluesky' in quotes, an action hint, and details.overLimitPosts with each over-limit post's characterCount. No post ID comes back, and the post never reaches Bluesky. The Error Reference doesn't say when this comes back; posts saved by older versions of this app show it as a failed post's errorMessage."
     },
     {
       "id": "demo-bluesky-too-long",
@@ -247,7 +249,44 @@
           "url": "https://help.blotato.com/rest-api-reference/publish-post/upload-media-v2-media"
         }
       ],
-      "inDocs": true
+      "inDocs": true,
+      "docsNote": "Checked against real Blotato on 2026-11-07: we didn't see this code. A media URL that returns 404 got 'Failed to read media metadata' (HTTP 500, code 90000) on upload, and 'Failed to fetch media URL: 404 Not Found' as a failed post's errorMessage when posting it directly."
+    },
+    {
+      "id": "media-url-fetch-failed",
+      "title": "Couldn't fetch the post's media URL",
+      "wording": [
+        "Failed to fetch media URL: 404 Not Found",
+        "Failed to fetch media URL: char '...' is not expected",
+        "Could not fetch media"
+      ],
+      "match": {
+        "httpStatus": [],
+        "codes": [],
+        "patterns": [
+          "failed to fetch media url",
+          "could not fetch media"
+        ]
+      },
+      "stage": "Publishing with mediaUrls",
+      "cause": "Blotato accepted the post, but when it went to publish, it couldn't download the media from a URL in mediaUrls. A 404 means nothing was found at that address.",
+      "fix": "Check that mediaUrls points to the media file itself and that it loads without signing in. Upload local files first and post with the returned publicUrl. Check the original post's outcome before sending it again.",
+      "sources": [
+        {
+          "title": "MCP examples: Posts failing with \"Could not fetch media\"",
+          "url": "https://help.blotato.com/start-with-an-ai-agent/mcp/examples"
+        },
+        {
+          "title": "Error Reference: API Errors",
+          "url": "https://help.blotato.com/support/errors"
+        },
+        {
+          "title": "Media uploads and conversion",
+          "url": "https://help.blotato.com/api-and-mcp-concepts/media-uploads-and-conversion"
+        }
+      ],
+      "inDocs": true,
+      "docsNote": "Checked against real Blotato on 2026-11-07: a post whose mediaUrls pointed to a missing file was accepted (HTTP 201), then failed with the errorMessage 'Failed to fetch media URL: 404 Not Found'. The Error Reference lists the same prefix with a different ending, and the MCP examples page covers it as \"Could not fetch media\"."
     },
     {
       "id": "unknown-9999",
@@ -313,12 +352,14 @@
       ],
       "match": {
         "httpStatus": [],
-        "codes": [],
+        "codes": [
+          90000
+        ],
         "patterns": [
           "failed to read media metadata"
         ]
       },
-      "stage": "Publishing with media",
+      "stage": "Uploading media from a URL, or publishing with media",
       "cause": "Blotato couldn't get usable details (like format and size) from the media file.",
       "fix": "Check that the file is reachable from a server (not just your browser), that it's a valid media file, and that the upload finished.",
       "sources": [
@@ -331,7 +372,8 @@
           "url": "https://help.blotato.com/api-and-mcp-concepts/media-uploads-and-conversion"
         }
       ],
-      "inDocs": true
+      "inDocs": true,
+      "docsNote": "Checked against real Blotato on 2026-11-07: uploading from a URL that returns 404 (POST /v2/media) got HTTP 500, code 90000, with this message. The Error Reference lists the message but not code 90000, and the Upload Media page lists code 90009 for media it can't fetch, which we didn't see."
     },
     {
       "id": "unsupported-media-type",
@@ -513,7 +555,8 @@
           "url": "https://help.blotato.com/rest-api-reference/publish-post/get-post"
         }
       ],
-      "inDocs": true
+      "inDocs": true,
+      "docsNote": "Checked against real Blotato on 2026-11-07: looking up a made-up post ID, or text that isn't an ID at all, returned HTTP 200 with status \"in-progress\", not 404, as the Post lifecycle page describes. We haven't seen a 404 from the status check."
     },
     {
       "id": "server-error-5xx",
@@ -726,7 +769,8 @@
           "url": "https://help.blotato.com/start-with-an-ai-agent/publishing-status"
         }
       ],
-      "inDocs": true
+      "inDocs": true,
+      "docsNote": "Checked against real Blotato on 2026-11-07: made-up post IDs returned { \"postSubmissionId\": \"<the ID>\", \"status\": \"in-progress\" }, the same as a real post that is still publishing."
     }
   ]
 }

@@ -559,7 +559,7 @@ function App() {
     if (ex?.saved) {
       const saved = ex.saved
       const ids = exampleIds(posts)
-      const id = saved.lookup?.postSubmissionId && (ex.key === 'rocket' ? ids.rocket : ex.key === 'scheduled' ? ids.pip : undefined)
+      const id = saved.lookup?.postSubmissionId && (ex.key === 'scheduled' ? ids.pip : undefined)
       setTicket((t) => ({
         ...t,
         status: 'done',

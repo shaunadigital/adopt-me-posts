@@ -19,12 +19,12 @@ export const ROCKET_DOCTOR: DoctorResult = {
       "id": "text-too-long-20005",
       "title": "Text over the platform's character limit (error code 20005)",
       "inDocs": true,
-      "docsNote": "The docs don't say whether this comes back when the post is created or later as the post's errorMessage, or how the platform name is written. Our demo returns it as the failed post's errorMessage with the platform written as 'bluesky'."
+      "docsNote": "Checked against real Blotato on 2026-11-07: a 301-character Bluesky post was rejected right away when it was created: HTTP 422, code 20005, the message above with 'bluesky' in quotes, an action hint, and details.overLimitPosts with each over-limit post's characterCount. No post ID comes back, and the post never reaches Bluesky. The Error Reference doesn't say when this comes back; posts saved by older versions of this app show it as a failed post's errorMessage."
     }
   ],
-  "cause": "Rocket's caption is 312 characters, and Bluesky allows 300 characters per post. Blotato accepted the post, but Bluesky rejected it at publishing because the text was too long (error code 20005).",
-  "fix": "Shorten the caption by at least 12 characters, then send it again. The photo uploaded fine, so only the text needs to change.",
-  "reply": "Hi there! Rocket's post didn't go out on Bluesky because the text was a little too long for that site, which has a 300 character limit. Nothing is wrong with his photo. We'll need a slightly shorter version of his write-up, and once it's trimmed it can be sent again. Rocket sounds like a wonderful boy, and we want everyone to see him. The Adopt Me Posts team",
+  "cause": "Rocket's caption is 312 characters, and Bluesky allows 300 per post. Blotato rejected it when creating the post, so it never went out. The photo uploaded fine.",
+  "fix": "Shorten the caption by at least 12 characters so the count is 300 or less, then send it again. Nothing was posted, so there is nothing to delete first.",
+  "reply": "Hi! Rocket's post didn't go out because the caption was a little too long for Bluesky, which allows 300 characters and his was 312. Nothing was posted, so there is nothing to delete. Please trim at least 12 characters, for example from the last line, and send it again. His photo uploaded fine, so only the text needs a small trim. Thanks for helping Rocket find a home! The Adopt Me Posts team",
   "sources": [
     {
       "title": "Error Reference: Plan Limit Errors",
@@ -37,7 +37,7 @@ export const ROCKET_DOCTOR: DoctorResult = {
   ],
   "checks": [],
   "model": "claude-sonnet-5-5",
-  "generatedAt": "2026-11-07T21:27:41.323Z"
+  "generatedAt": "2026-11-08T00:13:47.831Z"
 }
 
 const dog = (slug: string) => DOGS.find((d) => d.slug === slug)!
@@ -85,38 +85,52 @@ export function buildExamples(handle: string, now = Date.now()): PostRecord[] {
   const media = (slug: string) => `https://database.blotato.io/demo/example-${slug}.jpg`
 
   // 1. Failed: text over Bluesky's 300-character limit. Selected on load.
+  // Real Blotato rejects this when the post is created (HTTP 422, code 20005), so there's no
+  // postSubmissionId and the post never reaches Bluesky. The body is real Blotato's, checked 2026-11-07.
   const rocketAt = now - 42 * 60_000
-  const rocketId = encodeDemoPostId(rocketAt, null, `long${countCaption(ROCKET_TOO_LONG)}`)
-  // Blotato's documented wording (Error Reference, error code 20005).
-  const tooLong = 'Text length exceeds the character limit of 300 characters for platform bluesky (error code 20005)'
+  const rocketCount = countCaption(ROCKET_TOO_LONG)
+  const tooLong = "Text length exceeds the character limit of 300 characters for platform 'bluesky'"
+  const rocketError = `${tooLong} (HTTP 422, code 20005)`
   const rocket: PostRecord = {
-    localId: `example-rocket-${rocketId.slice(-8)}`,
+    localId: `example-rocket-${rocketAt.toString(36)}`,
     example: true,
     dogSlug: 'rocket',
     dogName: dog('rocket').name,
     caption: ROCKET_TOO_LONG,
     createdAt: iso(rocketAt),
-    queuedAt: iso(rocketAt + 428),
     status: 'failed',
-    postSubmissionId: rocketId,
     mediaUrl: media('rocket'),
-    failedStep: 'result',
-    error: tooLong,
+    failedStep: 'create',
+    error: `Post not created: ${rocketError}`,
     doctor: ROCKET_DOCTOR,
-    httpStatus: 200,
-    rawError: { postSubmissionId: rocketId, status: 'failed', errorMessage: tooLong },
+    httpStatus: 422,
+    rawError: {
+      statusCode: 422,
+      message: tooLong,
+      reqId: 'req-1f3k9a',
+      code: 20005,
+      action:
+        'Shorten each post in details.overLimitPosts so its characterCount is at most 300, then retry. characterCount is not string length: emoji and full-width characters such as CJK count as 2.',
+      details: {
+        platform: 'bluesky',
+        maxAllowed: 300,
+        overLimitPosts: [{ index: 0, characterCount: rocketCount, text: ROCKET_TOO_LONG }],
+      },
+    },
     trace: [
       captionStep(ROCKET_TOO_LONG, rocketAt - 90_000, 1400),
-      ...sentSteps('rocket', rocketAt, 240, 188),
+      sentSteps('rocket', rocketAt, 240, 0)[0],
       {
-        key: 'result',
-        label: 'Publishing failed',
+        key: 'create',
+        label: 'Post not created',
         state: 'failed',
-        meta: 'failed · 4 s later',
-        http: 200,
-        note: tooLong,
-        at: iso(rocketAt + 4428),
+        meta: '422 · 212 ms',
+        http: 422,
+        ms: 212,
+        note: rocketError,
+        at: iso(rocketAt + 452),
       },
+      { key: 'result', label: 'Result from Blotato', state: 'skipped', note: 'Not reached' },
     ],
   }
 

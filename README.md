@@ -4,6 +4,8 @@ A posting tool for a small dog rescue: it writes a Bluesky post for each dog, po
 
 **Live:** https://adopt-me-posts.vercel.app
 
+The live demo runs in demo mode. Run it locally with your own Blotato key to post for real.
+
 ![A 15-second tour: Rocket's failed post with its trace and post doctor, then Paste a ticket with an example](docs/images/tour.gif)
 
 ## Try this first
@@ -16,7 +18,7 @@ A posting tool for a small dog rescue: it writes a Bluesky post for each dog, po
 
 The app's server talks to Blotato for four things: list the connected accounts, upload the dog's photo, create the post (now or scheduled), and check the post's status until it's published or failed. The Blotato key stays on the server and is never sent to the browser.
 
-**Demo mode:** until a Blotato key is set, a stand-in answers instead of Blotato. It follows Blotato's documented responses and error messages, so the app works end to end without an account, and the yellow **Demo mode** badge in the header says so. The four example posts only appear in demo mode.
+**Demo mode:** until a Blotato key is set, a stand-in answers instead of Blotato. It copies real Blotato's responses and error messages, checked against the real API, so the app works end to end without an account, and the yellow **Demo mode** badge in the header says so. The four example posts only appear in demo mode.
 
 Captions and the post doctor use Claude (`claude-sonnet-5-5`). The post doctor only explains errors from [`docs/known-errors.json`](docs/known-errors.json), a list built from Blotato's docs where every entry links its source page ([Known errors page](https://adopt-me-posts.vercel.app/#known-errors)).
 
@@ -62,7 +64,7 @@ Notes from building this, offered kindly. Blotato's docs are thorough, and these
 - **Counting characters:** Blotato counts emoji and full-width characters as 2 toward the limit ([Error Reference, error code 20005](https://help.blotato.com/support/errors)), while Bluesky counts each visible character once ([Bluesky's post definition](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/feed/post.json), `maxGraphemes: 300`). So a post can fit Bluesky but not Blotato's check. This app counts the way Blotato does.
 - **The too-long error is documented, just easy to miss:** error 20005 is listed under Plan Limit Errors in the [Error Reference](https://help.blotato.com/support/errors). A link from the [Bluesky](https://help.blotato.com/platform-publishing/platforms/bluesky) or [Media Requirements](https://help.blotato.com/rest-api-reference/publish-post/media) page could help people find it.
 - **"Invalid account credentials"** appears as an example failed post in the [API reference for agents](https://help.blotato.com/start-with-an-ai-agent/llm), but isn't explained in the [Error Reference](https://help.blotato.com/support/errors). This app explains it with the closest documented case, "Account requires reconnect".
-- **Unknown post IDs look stuck:** [Post lifecycle](https://help.blotato.com/api-and-mcp-concepts/post-lifecycle) says the status check returns `in-progress` when there's no record of an ID, while the [OpenAPI spec](https://backend.blotato.com/openapi.json) also lists a 404. A mistyped ID can look like a stuck post. (This app's demo returns 404 for unknown IDs.)
+- **Unknown post IDs look stuck:** [Post lifecycle](https://help.blotato.com/api-and-mcp-concepts/post-lifecycle) says the status check returns `in-progress` when there's no record of an ID, while the [OpenAPI spec](https://backend.blotato.com/openapi.json) also lists a 404. A mistyped ID can look like a stuck post. In testing, real Blotato returned `in-progress` for made-up IDs, never 404.
 - **A cautious reading in this app:** "emoji" isn't defined further, so this app also counts symbols like © as 2. That may count a little high, but it never says a post fits when Blotato would reject it.
 
 ## Suggested help articles

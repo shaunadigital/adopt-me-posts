@@ -57,9 +57,9 @@ if (config.data?.demoMode !== true) {
 const accounts = await api('GET', '/api/accounts')
 const account = accounts.data?.items?.[0]
 check(
-  'GET /api/accounts → one Bluesky account',
+  'GET /api/accounts → one Bluesky account (numeric id, empty fullname, like real Blotato)',
   accounts.status === 200 && accounts.data.items.length === 1 && account.platform === 'bluesky' &&
-    account.username === 'adoptmeposts.bsky.social' && account.id && account.fullname,
+    account.username === 'adoptmeposts.bsky.social' && /^\d+$/.test(account.id) && account.fullname === '',
   accounts,
 )
 const filtered = await api('GET', '/api/accounts?platform=threads')
@@ -96,7 +96,14 @@ const schedStatus = await api('GET', `/api/posts/${sched.data?.postSubmissionId}
 check('GET /api/posts/:id (scheduled) → status scheduled', schedStatus.data?.status === 'scheduled', schedStatus)
 
 // Failure posts, created now so they resolve while we wait on the first post
-const tooLong = await api('POST', '/api/posts', { accountId: account?.id, text: 'x'.repeat(301) })
+const tooLong = await api('POST', '/api/posts', { accountId: account?.id, text: 'x'.repeat(299) + '🐶' })
+check(
+  'Text over 300 (emoji counts as 2) → 422 code 20005 at create, with action and overLimitPosts',
+  tooLong.status === 422 && tooLong.data?.statusCode === 422 && tooLong.data?.code === 20005 &&
+    tooLong.data?.message === "Text length exceeds the character limit of 300 characters for platform 'bluesky'" &&
+    !!tooLong.data?.action && tooLong.data?.details?.overLimitPosts?.[0]?.characterCount === 301 && !tooLong.data?.postSubmissionId,
+  tooLong,
+)
 const forcedDisc = await api('POST', '/api/posts?demoFail=disconnected-account', { accountId: account?.id, text: 'Hello' })
 const forcedMedia = await api('POST', '/api/posts', { accountId: account?.id, text: 'Hi', mediaUrls: ['https://example.com/a.jpg'] }, { 'x-demo-fail': 'bad-media-url' })
 
@@ -108,12 +115,6 @@ check(
   published,
 )
 
-const longResult = await waitForFinal(tooLong.data?.postSubmissionId)
-check(
-  'Text over 300 characters → failed with Blotato error 20005 wording',
-  longResult.final?.status === 'failed' && /character limit of 300 characters for platform bluesky \(error code 20005\)/.test(longResult.final.errorMessage),
-  longResult,
-)
 const discResult = await waitForFinal(forcedDisc.data?.postSubmissionId)
 check(
   'demoFail=disconnected-account → failed "Invalid account credentials"',
@@ -122,22 +123,22 @@ check(
 )
 const mediaResult = await waitForFinal(forcedMedia.data?.postSubmissionId)
 check(
-  'x-demo-fail: bad-media-url on a post → failed with fetch error',
-  mediaResult.final?.status === 'failed' && /could not fetch the media URL/.test(mediaResult.final.errorMessage),
+  'x-demo-fail: bad-media-url on a post → failed "Failed to fetch media URL: 404 Not Found"',
+  mediaResult.final?.status === 'failed' && mediaResult.final.errorMessage === 'Failed to fetch media URL: 404 Not Found',
   mediaResult,
 )
 
 // Request-level failures
 const badKey = await api('GET', '/api/accounts?demoFail=invalid-key')
-check('demoFail=invalid-key → 401 with message', badKey.status === 401 && badKey.data?.message, badKey)
+check('demoFail=invalid-key → 401 { message: "Unauthorized" }', badKey.status === 401 && badKey.data?.message === 'Unauthorized', badKey)
 const badMedia = await api('POST', '/api/media/from-url?demoFail=bad-media-url', { url: 'https://example.com/x.jpg' })
-check('demoFail=bad-media-url on media → 422 code 90009', badMedia.status === 422 && badMedia.data?.code === 90009, badMedia)
+check('demoFail=bad-media-url on media → 500 code 90000 "Failed to read media metadata"', badMedia.status === 500 && badMedia.data?.code === 90000 && /^Failed to read media metadata/.test(badMedia.data?.message), badMedia)
 const unreachable = await api('POST', '/api/media/from-url', { url: 'not a url' })
-check('Unfetchable media URL → 422 code 90009', unreachable.status === 422 && unreachable.data?.code === 90009, unreachable)
+check('Unfetchable media URL → 500 code 90000', unreachable.status === 500 && unreachable.data?.code === 90000, unreachable)
 const unknownFail = await api('GET', '/api/accounts?demoFail=nope')
 check('Unknown demoFail → 400', unknownFail.status === 400, unknownFail)
 const missing = await api('GET', '/api/posts/not-a-real-id')
-check('Unknown post ID → 404 "Not found"', missing.status === 404 && missing.data?.message === 'Not found', missing)
+check('Unknown post ID → 200 in-progress (like real Blotato)', missing.status === 200 && missing.data?.status === 'in-progress' && missing.data?.postSubmissionId === 'not-a-real-id', missing)
 
 console.log(failures ? `\n${failures} check(s) failed.` : '\nAll checks passed.')
 process.exit(failures ? 1 : 0)

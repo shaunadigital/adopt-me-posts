@@ -1,5 +1,6 @@
 // Fake Blotato for demo mode (BLOTATO_API_KEY empty).
-// Responses use the same shapes and status codes as the real API (docs/blotato-api-notes.md).
+// Responses match the real API's shapes, status codes and wording, checked against real Blotato on
+// 2026-11-07 (see "Checked against real Blotato" in docs/blotato-api-notes.md).
 //
 // Serverless functions don't share memory, so demo posts are stateless: the postSubmissionId
 // encodes when the post was created, when it's scheduled, and how it will end. Any instance
@@ -20,10 +21,11 @@ import type {
   UploadFromUrlResponse,
 } from './types.js'
 
+// Real accounts have numeric-string IDs, and Bluesky accounts came back with an empty fullname.
 export const DEMO_ACCOUNT: BlotatoAccount = {
-  id: 'demo-bluesky-1',
+  id: '100001',
   platform: 'bluesky',
-  fullname: 'Adopt Me Posts',
+  fullname: '',
   username: 'adoptmeposts.bsky.social',
 }
 
@@ -32,22 +34,26 @@ export const DEMO_PUBLISH_DELAY_MS = 4000
 
 const BLUESKY_CHAR_LIMIT = 300
 
-// Wording from Blotato's docs where it exists. See the table at the end of docs/blotato-api-notes.md.
+// Real wording, as real Blotato returned it (2026-11-07), or from Blotato's docs where untested.
 export const DEMO_MESSAGES = {
-  invalidKey: 'Invalid API key',
-  invalidCredentials: 'Invalid account credentials',
-  mediaFetch:
-    'Blotato could not fetch the media URL. Confirm the URL loads or downloads without signing in, then try again.',
+  unauthorized: 'Unauthorized', // real: 401 {"message":"Unauthorized"}
+  invalidCredentials: 'Invalid account credentials', // docs example; not reproduced for real
+  mediaFetchOnPublish: 'Failed to fetch media URL: 404 Not Found', // real: post status errorMessage
+  mediaMetadata: 'Failed to read media metadata. Is the file accessible and a valid media file?', // real: 500, code 90000
   urlMissing: '"url" is missing. Add it as a top-level property with the public URL of the media to upload.',
-  // Error Reference, Plan Limit Errors (error code 20005). The docs don't show how the platform name is written.
-  tooLong: (_n: number) =>
-    `Text length exceeds the character limit of ${BLUESKY_CHAR_LIMIT} characters for platform bluesky (error code 20005)`,
+  tooLong: `Text length exceeds the character limit of ${BLUESKY_CHAR_LIMIT} characters for platform 'bluesky'`, // real: 422, code 20005
+  tooLongAction:
+    'Shorten each post in details.overLimitPosts so its characterCount is at most 300, then retry. characterCount is not string length: emoji and full-width characters such as CJK count as 2.',
 } as const
 
 type DemoReply = { status: number; body: unknown }
 
 const reqId = () => `demo-req-${randomUUID().slice(0, 8)}`
-const err = (status: number, body: BlotatoErrorBody): DemoReply => ({ status, body: { reqId: reqId(), ...body } })
+// Real error bodies: { statusCode, message, reqId, code?, action?, details? }.
+const err = (status: number, { message, ...rest }: BlotatoErrorBody): DemoReply => ({
+  status,
+  body: { statusCode: status, message, reqId: reqId(), ...rest },
+})
 
 // Blotato counts emoji and full-width characters as 2 toward the limit (Error Reference, 20005).
 export { countGraphemes } from '../../shared/textCount.js'
@@ -99,8 +105,9 @@ function createUploadUrl(body: unknown): DemoReply {
 function uploadFromUrl(body: unknown, fail: DemoFailure | null): DemoReply {
   const url = (body as { url?: unknown })?.url
   if (url === undefined || url === '') return err(422, { message: DEMO_MESSAGES.urlMissing })
+  // Real: a URL that 404s gives HTTP 500, code 90000 (not the documented 90009).
   if (fail === 'bad-media-url' || !isFetchableUrl(url)) {
-    return err(422, { code: 90009, message: DEMO_MESSAGES.mediaFetch })
+    return err(500, { message: DEMO_MESSAGES.mediaMetadata, code: 90000 })
   }
   const key = randomUUID()
   const ext = extOf(new URL(url as string).pathname) ?? 'jpg'
@@ -135,16 +142,29 @@ function createPost(body: unknown, fail: DemoFailure | null, now: number): DemoR
     if (scheduled <= now) scheduled = null // a time in the past publishes now
   }
 
-  // Decide now how this post will end. Failures surface later as status "failed", like the real queue.
-  let outcome = 'ok'
+  // Text over the limit: real Blotato rejects the request right away (422, code 20005) with an
+  // action hint and the over-limit posts in details.
   const texts = [p.content.text, ...(p.content.additionalPosts ?? []).map((a) => a.text)]
-  const longest = Math.max(...texts.map(countForBlotato))
-  const mediaUrls = [p.content.mediaUrls, ...(p.content.additionalPosts ?? []).map((a) => a.mediaUrls)].flat()
+  const over = texts
+    .map((text, index) => ({ index, characterCount: countForBlotato(text), text }))
+    .filter((t) => t.characterCount > BLUESKY_CHAR_LIMIT)
+  if (fail === 'too-long' && over.length === 0) {
+    over.push({ index: 0, characterCount: Math.max(texts[0] ? countForBlotato(texts[0]) : 0, BLUESKY_CHAR_LIMIT + 1), text: texts[0] })
+  }
+  if (p.content.platform === 'bluesky' && over.length > 0) {
+    return err(422, {
+      message: DEMO_MESSAGES.tooLong,
+      code: 20005,
+      action: DEMO_MESSAGES.tooLongAction,
+      details: { platform: 'bluesky', maxAllowed: BLUESKY_CHAR_LIMIT, overLimitPosts: over },
+    })
+  }
 
+  // Decide now how this post will end. These failures surface later as status "failed", like the real queue.
+  let outcome = 'ok'
+  const mediaUrls = [p.content.mediaUrls, ...(p.content.additionalPosts ?? []).map((a) => a.mediaUrls)].flat()
   if (fail === 'disconnected-account' || p.accountId !== DEMO_ACCOUNT.id) outcome = 'dis'
   else if (fail === 'bad-media-url' || mediaUrls.some((u) => !isFetchableUrl(u))) outcome = 'media'
-  else if (fail === 'too-long') outcome = `long${Math.max(longest, BLUESKY_CHAR_LIMIT + 1)}`
-  else if (p.content.platform === 'bluesky' && longest > BLUESKY_CHAR_LIMIT) outcome = `long${longest}`
 
   const res: CreatePostResponse = { postSubmissionId: encodeId(now, scheduled, outcome) }
   if (scheduled) res.scheduledTime = new Date(scheduled).toISOString()
@@ -153,7 +173,8 @@ function createPost(body: unknown, fail: DemoFailure | null, now: number): DemoR
 
 function getPostStatus(id: string, now: number): DemoReply {
   const m = ID_RE.exec(id)
-  if (!m) return { status: 404, body: { statusCode: 404, message: 'Not found' } }
+  // Real: an unknown or made-up ID is 200 with status in-progress, not 404 (Post lifecycle page).
+  if (!m) return { status: 200, body: { postSubmissionId: id, status: 'in-progress' } satisfies PostStatusResponse }
 
   const created = parseInt(m[1], 36)
   const scheduled = m[2] === '0' ? null : parseInt(m[2], 36)
@@ -172,19 +193,21 @@ function getPostStatus(id: string, now: number): DemoReply {
     res.publicUrl = `https://bsky.app/profile/${DEMO_ACCOUNT.username}/post/${m[4]}`
   } else {
     res.status = 'failed'
+    // 'long<N>' IDs only exist in posts saved before too-long moved to create time.
     res.errorMessage =
       outcome === 'dis'
         ? DEMO_MESSAGES.invalidCredentials
         : outcome === 'media'
-          ? DEMO_MESSAGES.mediaFetch
-          : DEMO_MESSAGES.tooLong(parseInt(outcome.slice(4), 10))
+          ? DEMO_MESSAGES.mediaFetchOnPublish
+          : DEMO_MESSAGES.tooLong
   }
   return { status: 200, body: res }
 }
 
 /** Answer a Blotato request the way the real API would. `path` includes `/v2` and any query string. */
 export function demoBlotato(method: string, path: string, body: unknown, fail: DemoFailure | null, now = Date.now()): DemoReply {
-  if (fail === 'invalid-key') return err(401, { message: DEMO_MESSAGES.invalidKey })
+  // Real: 401 with only a message, no reqId.
+  if (fail === 'invalid-key') return { status: 401, body: { message: DEMO_MESSAGES.unauthorized } }
 
   const url = new URL(path, 'https://backend.blotato.com')
   const route = `${method} ${url.pathname}`
