@@ -4,6 +4,8 @@ A posting tool for a small dog rescue: it writes a Bluesky post for each dog, po
 
 **Live:** https://adopt-me-posts.vercel.app
 
+**Demo video:** https://youtu.be/3MXjBFj5Fmk
+
 **Real posts:** [@adoptmeposts.bsky.social](https://bsky.app/profile/adoptmeposts.bsky.social) on Bluesky, posted through Blotato from this app and the n8n workflow.
 
 The live demo runs in demo mode. Run it locally with your own Blotato key to post for real.
@@ -105,6 +107,6 @@ Open http://localhost:3000. `npm run test:demo` checks every route in demo mode,
 
 ## Credits
 
-Dog photos are from Unsplash, and the fonts are Schibsted Grotesk and IBM Plex Mono; see [CREDITS.md](CREDITS.md). The dogs and Odd Socks Dog Rescue are made up.
+Dog photos are from Unsplash, and the fonts are Schibsted Grotesk and IBM Plex Mono; see [CREDITS.md](CREDITS.md). The code is under the [MIT License](LICENSE). The dogs and Odd Socks Dog Rescue are made up.
 
 A sample app by Shauna Arnold · [shauna.dev](https://shauna.dev)

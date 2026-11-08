@@ -31,3 +31,7 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Local only
+application/
+.claude/settings.local.json
