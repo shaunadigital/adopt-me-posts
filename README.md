@@ -4,6 +4,8 @@ A posting tool for a small dog rescue: it writes a Bluesky post for each dog, po
 
 **Live:** https://adopt-me-posts.vercel.app
 
+**Real posts:** [@adoptmeposts.bsky.social](https://bsky.app/profile/adoptmeposts.bsky.social) on Bluesky, posted through Blotato from this app and the n8n workflow.
+
 The live demo runs in demo mode. Run it locally with your own Blotato key to post for real.
 
 ![A 15-second tour: Rocket's failed post with its trace and post doctor, then Paste a ticket with an example](docs/images/tour.gif)
@@ -37,6 +39,11 @@ Two skills:
 ## n8n workflows
 
 - **Dog of the week** ([`n8n/dog-of-the-week.json`](n8n/dog-of-the-week.json)): every Monday at 9:00 AM Hawaii time, it posts the next dog to Bluesky with Blotato's official n8n node, then checks the post once.
+
+  ![The Dog of the week workflow in n8n after a test run, every step checked](docs/images/n8n-dog-of-the-week-run.png)
+
+  *A test run that posted to Bluesky for real, through Blotato's n8n node.*
+
 - **Support agent** ([`n8n/support-agent.json`](n8n/support-agent.json)): a chat support agent with three tools: look up a post, search known errors, and Blotato's docs MCP server. It answers everyday questions, hands billing to a person without guessing, and escalates very technical questions with a short note for an engineer.
 
 <details>
@@ -65,6 +72,8 @@ Notes from building this, offered kindly. Blotato's docs are thorough, and these
 - **The too-long error is documented, just easy to miss:** error 20005 is listed under Plan Limit Errors in the [Error Reference](https://help.blotato.com/support/errors). A link from the [Bluesky](https://help.blotato.com/platform-publishing/platforms/bluesky) or [Media Requirements](https://help.blotato.com/rest-api-reference/publish-post/media) page could help people find it.
 - **"Invalid account credentials"** appears as an example failed post in the [API reference for agents](https://help.blotato.com/start-with-an-ai-agent/llm), but isn't explained in the [Error Reference](https://help.blotato.com/support/errors). This app explains it with the closest documented case, "Account requires reconnect".
 - **Unknown post IDs look stuck:** [Post lifecycle](https://help.blotato.com/api-and-mcp-concepts/post-lifecycle) says the status check returns `in-progress` when there's no record of an ID, while the [OpenAPI spec](https://backend.blotato.com/openapi.json) also lists a 404. A mistyped ID can look like a stuck post. In testing, real Blotato returned `in-progress` for made-up IDs, never 404.
+- **No alt text for Bluesky images:** in the [OpenAPI spec](https://backend.blotato.com/openapi.json), `altText` is a target field for Instagram and Pinterest only, and the Bluesky target has no options. So images posted to Bluesky through the API reach screen reader users as just "image". An `altText` option for Bluesky (and other platforms that support it) would help rescues and others reach everyone.
+- **One post, two IDs:** creating a post returns a `postSubmissionId` (a UUID), and the same post shows up in the post list with a different ID, which was numeric in our testing. [Accounts and identifiers](https://help.blotato.com/api-and-mcp-concepts/accounts-and-identifiers) does explain that these are separate IDs, but a customer comparing the dashboard with the API could easily think they're looking at two different posts. Showing the `postSubmissionId` next to the post in the dashboard, or returning it in the post list, could save some support questions.
 - **A cautious reading in this app:** "emoji" isn't defined further, so this app also counts symbols like © as 2. That may count a little high, but it never says a post fits when Blotato would reject it.
 
 ## Suggested help articles
